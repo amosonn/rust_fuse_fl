@@ -50,7 +50,7 @@ pub trait FilesystemFL {
     /// Get the attributes of a filesystem entry.
     ///
     /// * `fl`: a FileLike object if this is called on an open file.
-    fn getattr(&self, _req: RequestInfo, _path: &Path, _fl: Option<&RwLock<Self::FileLike>>) -> ResultGetattr {
+    fn getattr(&self, _req: RequestInfo, _path: &Path, _fl: Option<&Self::FileLike>) -> ResultGetattr {
         Err(libc::ENOSYS)
     }
 
@@ -61,7 +61,7 @@ pub trait FilesystemFL {
     ///
     /// * `fl`: a FileLike object if this is called on an open file.
     /// * `mode`: the mode to change the file to.
-    fn chmod(&self, _req: RequestInfo, _path: &Path, _fl: Option<&RwLock<Self::FileLike>>, _mode: u32) -> ResultEmpty {
+    fn chmod(&self, _req: RequestInfo, _path: &Path, _fl: Option<&Self::FileLike>, _mode: u32) -> ResultEmpty {
         Err(libc::ENOSYS)
     }
 
@@ -70,7 +70,7 @@ pub trait FilesystemFL {
     /// * `fl`: a FileLike object if this is called on an open file.
     /// * `uid`: user ID to change the file's owner to. If `None`, leave the UID unchanged.
     /// * `gid`: group ID to change the file's group to. If `None`, leave the GID unchanged.
-    fn chown(&self, _req: RequestInfo, _path: &Path, _fl: Option<&RwLock<Self::FileLike>>, _uid: Option<u32>, _gid: Option<u32>) -> ResultEmpty {
+    fn chown(&self, _req: RequestInfo, _path: &Path, _fl: Option<&Self::FileLike>, _uid: Option<u32>, _gid: Option<u32>) -> ResultEmpty {
         Err(libc::ENOSYS)
     }
 
@@ -78,7 +78,7 @@ pub trait FilesystemFL {
     ///
     /// * `fl`: a FileLike object if this is called on an open file.
     /// * `size`: size in bytes to set as the file's length.
-    fn truncate(&self, _req: RequestInfo, _path: &Path, _fl: Option<&RwLock<Self::FileLike>>, _size: u64) -> ResultEmpty {
+    fn truncate(&self, _req: RequestInfo, _path: &Path, _fl: Option<&Self::FileLike>, _size: u64) -> ResultEmpty {
         Err(libc::ENOSYS)
     }
 
@@ -87,13 +87,13 @@ pub trait FilesystemFL {
     /// * `fl`: a FileLike object if this is called on an open file.
     /// * `atime`: the time of last access.
     /// * `mtime`: the time of last modification.
-    fn utimens(&self, _req: RequestInfo, _path: &Path, _fl: Option<&RwLock<Self::FileLike>>, _atime: Option<Timespec>, _mtime: Option<Timespec>) -> ResultEmpty {
+    fn utimens(&self, _req: RequestInfo, _path: &Path, _fl: Option<&Self::FileLike>, _atime: Option<Timespec>, _mtime: Option<Timespec>) -> ResultEmpty {
         Err(libc::ENOSYS)
     }
 
     /// Set timestamps of a filesystem entry (with extra options only used on MacOS).
     #[allow(unknown_lints, too_many_arguments)]
-    fn utimens_macos(&self, _req: RequestInfo, _path: &Path, _fl: Option<&RwLock<Self::FileLike>>, _crtime: Option<Timespec>, _chgtime: Option<Timespec>, _bkuptime: Option<Timespec>, _flags: Option<u32>) -> ResultEmpty {
+    fn utimens_macos(&self, _req: RequestInfo, _path: &Path, _fl: Option<&Self::FileLike>, _crtime: Option<Timespec>, _chgtime: Option<Timespec>, _bkuptime: Option<Timespec>, _flags: Option<u32>) -> ResultEmpty {
         Err(libc::ENOSYS)
     }
 
@@ -191,7 +191,7 @@ pub trait FilesystemFL {
     /// * `size`: number of bytes to read.
     ///
     /// Return the bytes read.
-    fn read(&self, _req: RequestInfo, _path: &Path, _fl: &RwLock<Self::FileLike>, _offset: u64, _size: u32) -> ResultData {
+    fn read(&self, _req: RequestInfo, _path: &Path, _fl: &Self::FileLike, _offset: u64, _size: u32) -> ResultData {
         Err(libc::ENOSYS)
     }
 
@@ -204,7 +204,7 @@ pub trait FilesystemFL {
     /// * `flags`:
     ///
     /// Return the number of bytes written.
-    fn write(&self, _req: RequestInfo, _path: &Path, _fl: &RwLock<Self::FileLike>, _offset: u64, _data: Vec<u8>, _flags: u32) -> ResultWrite {
+    fn write(&self, _req: RequestInfo, _path: &Path, _fl: &Self::FileLike, _offset: u64, _data: Vec<u8>, _flags: u32) -> ResultWrite {
         Err(libc::ENOSYS)
     }
 
@@ -224,7 +224,7 @@ pub trait FilesystemFL {
     /// * `fl`: FileLike object returned from the `open` call.
     /// * `lock_owner`: if the filesystem supports locking (`setlk`, `getlk`), remove all locks
     ///   belonging to this lock owner.
-    fn flush(&self, _req: RequestInfo, _path: &Path, _fl: &RwLock<Self::FileLike>, _lock_owner: u64) -> ResultEmpty {
+    fn flush(&self, _req: RequestInfo, _path: &Path, _fl: &Self::FileLike, _lock_owner: u64) -> ResultEmpty {
         Err(libc::ENOSYS)
     }
 
@@ -235,7 +235,7 @@ pub trait FilesystemFL {
     /// * `path`: path to the file.
     /// * `fl`: FileLike object returned from the `open` call.
     /// * `datasync`: if `false`, just write metadata, otherwise also write file data.
-    fn fsync(&self, _req: RequestInfo, _path: &Path, _fl: &RwLock<Self::FileLike>, _datasync: bool) -> ResultEmpty {
+    fn fsync(&self, _req: RequestInfo, _path: &Path, _fl: &Self::FileLike, _datasync: bool) -> ResultEmpty {
         Err(libc::ENOSYS)
     }
 
@@ -259,7 +259,7 @@ pub trait FilesystemFL {
     /// * `dl`: DirLike object returned from the `opendir` call.
     ///
     /// Return all the entries of the directory.
-    fn readdir(&self, _req: RequestInfo, _path: &Path, _dl: &RwLock<Self::DirLike>) -> ResultReaddir {
+    fn readdir(&self, _req: RequestInfo, _path: &Path, _dl: &Self::DirLike) -> ResultReaddir {
         Err(libc::ENOSYS)
     }
 
@@ -270,14 +270,14 @@ pub trait FilesystemFL {
     /// * `path`: path to the directory.
     /// * `dl`: DirLike object returned from the `opendir` call.
     /// * `flags`: the file access flags passed to the `opendir` call.
-    fn releasedir(&self, _req: RequestInfo, _path: &Path, _dl: &RwLock<Self::DirLike>, _flags: u32) -> ResultEmpty {
+    fn releasedir(&self, _req: RequestInfo, _path: &Path, _dl: &Self::DirLike, _flags: u32) -> ResultEmpty {
         Err(libc::ENOSYS)
     }
 
     /// Write out any pending changes to a directory.
     ///
     /// Analogous to the `fsync` call.
-    fn fsyncdir(&self, _req: RequestInfo, _path: &Path, _dl: &RwLock<Self::DirLike>, _datasync: bool) -> ResultEmpty {
+    fn fsyncdir(&self, _req: RequestInfo, _path: &Path, _dl: &Self::DirLike, _datasync: bool) -> ResultEmpty {
         Err(libc::ENOSYS)
     }
 

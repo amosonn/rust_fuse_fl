@@ -6,6 +6,10 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 //
+
+extern crate fuse_mt;
+extern crate libc;
+
 #[test]
 fn it_works() {
 }

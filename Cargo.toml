@@ -2,5 +2,10 @@
 name = "fuse_fl"
 version = "0.1.0"
 authors = ["Amos Onn <amosonn@gmail.com>"]
+repository = "https://github.com/amosonn/rust_fuse_fl"
+description = "An even higher-level FUSE filesystem library, built over fuse_mt, providing tracking of file-handlers, using File traits (Read, Write, Seek)."
+categories = ["filesystem"]
+keywords = ["fuse", "filesystem"]
+license = "MIT/Apache-2.0"
 
 [dependencies]

@@ -365,3 +365,186 @@ pub trait FilesystemFL {
     // bmap
 }
 
+
+struct FuseFL<T> {
+    inner: T,
+}
+
+
+impl<T> FuseFL<T> {
+    fn new(target_fs: T) -> FuseFL<T> {
+        FuseFL {
+            inner: target_fs,
+        }
+    }
+}
+
+
+impl<T: FilesystemFL + Sync + Send + 'static> FilesystemMT for FuseFL<T> {
+}
+    fn init(&self, _req: RequestInfo) -> ResultEmpty {
+        self.inner.init(_req)
+    }
+
+    fn destroy(&self, _req: RequestInfo) {
+        self.inner.destroy(_req)
+    }
+
+    fn lookup(&self, _req: RequestInfo, _parent: &Path, _name: &OsStr) -> ResultEntry {
+        self.inner.lookup(_req, _parent, _name)
+    }
+
+    fn getattr(&self, _req: RequestInfo, _path: &Path, _fh: Option<u64>) -> ResultGetattr {
+        // self.inner.getattr(_req, _path, _fh)
+        Err(libc::ENOSYS)
+    }
+
+    // The following operations in the FUSE C API are all one kernel call: setattr
+    // We split them out to match the C API's behavior.
+
+    fn chmod(&self, _req: RequestInfo, _path: &Path, _fh: Option<u64>, _mode: u32) -> ResultEmpty {
+        // self.inner.chmod(_req, _path, _fh, _mode)
+        Err(libc::ENOSYS)
+    }
+
+    fn chown(&self, _req: RequestInfo, _path: &Path, _fh: Option<u64>, _uid: Option<u32>, _gid: Option<u32>) -> ResultEmpty {
+        // self.inner.chown(_req, _path, _fh, _uid, _gid)
+        Err(libc::ENOSYS)
+    }
+
+    fn truncate(&self, _req: RequestInfo, _path: &Path, _fh: Option<u64>, _size: u64) -> ResultEmpty {
+        // self.inner.truncate(_req, _path, _fh, _size)
+        Err(libc::ENOSYS)
+    }
+
+    fn utimens(&self, _req: RequestInfo, _path: &Path, _fh: Option<u64>, _atime: Option<Timespec>, _mtime: Option<Timespec>) -> ResultEmpty {
+        // self.inner.utimens(_req, _path, _fh, _atime, _mtime)
+        Err(libc::ENOSYS)
+    }
+
+    #[allow(unknown_lints, too_many_arguments)]
+    fn utimens_macos(&self, _req: RequestInfo, _path: &Path, _fh: Option<u64>, _crtime: Option<Timespec>, _chgtime: Option<Timespec>, _bkuptime: Option<Timespec>, _flags: Option<u32>) -> ResultEmpty {
+        // self.inner.utimens_macos(_req, _path, _fh, _crtime, _chgtime, _bkuptime, _flags)
+        Err(libc::ENOSYS)
+    }
+
+    // END OF SETATTR FUNCTIONS
+
+    fn readlink(&self, _req: RequestInfo, _path: &Path) -> ResultData {
+        self.inner.readlink(_req, _path)
+    }
+
+    fn mknod(&self, _req: RequestInfo, _parent: &Path, _name: &OsStr, _mode: u32, _rdev: u32) -> ResultEntry {
+        self.inner.mknod(_req, _parent, _name, _mode, _rdev)
+    }
+
+    fn mkdir(&self, _req: RequestInfo, _parent: &Path, _name: &OsStr, _mode: u32) -> ResultEntry {
+        self.inner.mkdir(_req, _parent, _name, _mode)
+    }
+
+    fn unlink(&self, _req: RequestInfo, _parent: &Path, _name: &OsStr) -> ResultEmpty {
+        self.inner.unlink(_req, _parent, _name)
+    }
+
+    fn rmdir(&self, _req: RequestInfo, _parent: &Path, _name: &OsStr) -> ResultEmpty {
+        self.inner.rmdir(_req, _parent, _name)
+    }
+
+    fn symlink(&self, _req: RequestInfo, _parent: &Path, _name: &OsStr, _target: &Path) -> ResultEntry {
+        self.inner.symlink(_req, _parent, _name, _target)
+    }
+
+    fn rename(&self, _req: RequestInfo, _parent: &Path, _name: &OsStr, _newparent: &Path, _newname: &OsStr) -> ResultEmpty {
+        self.inner.rename(_req, _parent, _name, _newparent, _newname)
+    }
+
+    fn link(&self, _req: RequestInfo, _path: &Path, _newparent: &Path, _newname: &OsStr) -> ResultEntry {
+        self.inner.link(_req, _path, _newparent, _newname)
+    }
+
+    fn open(&self, _req: RequestInfo, _path: &Path, _flags: u32) -> ResultOpen {
+        // self.inner.open(_req, _path, _flags)
+        Err(libc::ENOSYS)
+    }
+
+    fn read(&self, _req: RequestInfo, _path: &Path, _fh: u64, _offset: u64, _size: u32) -> ResultData {
+        // self.inner.read(_req, _path, _fh, _offset, _size)
+        Err(libc::ENOSYS)
+    }
+
+    fn write(&self, _req: RequestInfo, _path: &Path, _fh: u64, _offset: u64, _data: Vec<u8>, _flags: u32) -> ResultWrite {
+        // self.inner.write(_req, _path, _fh, _offset, _data, _flags)
+        Err(libc::ENOSYS)
+    }
+
+    fn flush(&self, _req: RequestInfo, _path: &Path, _fh: u64, _lock_owner: u64) -> ResultEmpty {
+        // self.inner.flush(_req, _path, _fh, _lock_owner)
+        Err(libc::ENOSYS)
+    }
+
+    fn release(&self, _req: RequestInfo, _path: &Path, _fh: u64, _flags: u32, _lock_owner: u64, _flush: bool) -> ResultEmpty {
+        // self.inner.release(_req, _path, _fh, _flags, _lock_owner, _flush)
+        Err(libc::ENOSYS)
+    }
+
+    fn fsync(&self, _req: RequestInfo, _path: &Path, _fh: u64, _datasync: bool) -> ResultEmpty {
+        // self.inner.fsync(_req, _path, _fh, _datasync)
+        Err(libc::ENOSYS)
+    }
+
+    fn opendir(&self, _req: RequestInfo, _path: &Path, _flags: u32) -> ResultOpen {
+        // self.inner.opendir(_req, _path, _flags)
+        Err(libc::ENOSYS)
+    }
+
+    fn readdir(&self, _req: RequestInfo, _path: &Path, _fh: u64) -> ResultReaddir {
+        // self.inner.readdir(_req, _path, _fh)
+        Err(libc::ENOSYS)
+    }
+
+    fn releasedir(&self, _req: RequestInfo, _path: &Path, _fh: u64, _flags: u32) -> ResultEmpty {
+        // self.inner.releasedir(_req, _path, _fh, _flags)
+        Err(libc::ENOSYS)
+    }
+
+    fn fsyncdir(&self, _req: RequestInfo, _path: &Path, _fh: u64, _datasync: bool) -> ResultEmpty {
+        // self.inner.fsyncdir(_req, _path, _fh, _datasync)
+        Err(libc::ENOSYS)
+    }
+
+    fn statfs(&self, _req: RequestInfo, _path: &Path) -> ResultStatfs {
+        self.inner.statfs(_req, _path)
+    }
+
+    fn setxattr(&self, _req: RequestInfo, _path: &Path, _name: &OsStr, _value: &[u8], _flags: u32, _position: u32) -> ResultEmpty {
+        self.inner.setxattr(_req, _path, _name, _value, _flags, _position)
+    }
+
+    fn getxattr(&self, _req: RequestInfo, _path: &Path, _name: &OsStr, _size: u32) -> ResultXattr {
+        self.inner.getxattr(_req, _path, _name, _size)
+    }
+
+    fn listxattr(&self, _req: RequestInfo, _path: &Path, _size: u32) -> ResultXattr {
+        self.inner.listxattr(_req, _path, _size)
+    }
+
+    fn removexattr(&self, _req: RequestInfo, _path: &Path, _name: &OsStr) -> ResultEmpty {
+        self.inner.removexattr(_req, _path, _name)
+    }
+
+    fn access(&self, _req: RequestInfo, _path: &Path, _mask: u32) -> ResultEmpty {
+        self.inner.access(_req, _path, _mask)
+    }
+
+    fn create(&self, _req: RequestInfo, _parent: &Path, _name: &OsStr, _mode: u32, _flags: u32) -> ResultCreate {
+        // self.inner.create(_req, _parent, _name, _mode, _flags)
+        Err(libc::ENOSYS)
+    }
+
+    // getlk
+
+    // setlk
+
+    // bmap
+}
+

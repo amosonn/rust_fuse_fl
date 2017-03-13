@@ -263,17 +263,6 @@ pub trait FilesystemFL {
         Err(libc::ENOSYS)
     }
 
-    /// Close an open directory.
-    ///
-    /// This will be called exactly once for each `opendir` call.
-    ///
-    /// * `path`: path to the directory.
-    /// * `dl`: DirLike object returned from the `opendir` call.
-    /// * `flags`: the file access flags passed to the `opendir` call.
-    fn releasedir(&self, _req: RequestInfo, _path: &Path, _dl: &Self::DirLike, _flags: u32) -> ResultEmpty {
-        Err(libc::ENOSYS)
-    }
-
     /// Write out any pending changes to a directory.
     ///
     /// Analogous to the `fsync` call.

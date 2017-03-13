@@ -10,6 +10,9 @@
 use fuse_mt::*;
 use libc;
 
+use std::collections::HashMap;
+use std::sync::RwLock;
+
 /// The return value for `create`: contains info on the newly-created file, as well as a FileLike
 /// object to handle the opened file.
 pub struct CreatedEntryObj<T> {
@@ -355,15 +358,27 @@ pub trait FilesystemFL {
 }
 
 
-struct FuseFL<T> {
+struct FuseFL<T> where T: FilesystemFL {
     inner: T,
+    files: RwLock<HashMap<u64, T::FileLike>>,
+    dirs: RwLock<HashMap<u64, T::DirLike>>,
+}
+
+
+#[inline]
+fn get_for_fh<T>(rwhm: RwLock<HashMap<u64, T>>, fh: u64) -> T {
+    // The first unwrap is assuming we have no posioning, which is reasonable.
+    // The second unwrap is because otherwise this fh is missing, which is fatal.
+    rwhm.read().unwrap().get(fh).unwrap()
 }
 
 
 impl<T> FuseFL<T> {
-    fn new(target_fs: T) -> FuseFL<T> {
+    pub fn new(target_fs: T) -> FuseFL<T> {
         FuseFL {
             inner: target_fs,
+            files: RwLock::new(HashMap::new()),
+            dirs: RwLock::new(HashMap::new()),
         }
     }
 }
@@ -384,37 +399,31 @@ impl<T: FilesystemFL + Sync + Send + 'static> FilesystemMT for FuseFL<T> {
     }
 
     fn getattr(&self, _req: RequestInfo, _path: &Path, _fh: Option<u64>) -> ResultGetattr {
-        // self.inner.getattr(_req, _path, _fh)
-        Err(libc::ENOSYS)
+        self.inner.getattr(_req, _path, _fh.map(|x| get_for_fh(self.files, x)))
     }
 
     // The following operations in the FUSE C API are all one kernel call: setattr
     // We split them out to match the C API's behavior.
 
     fn chmod(&self, _req: RequestInfo, _path: &Path, _fh: Option<u64>, _mode: u32) -> ResultEmpty {
-        // self.inner.chmod(_req, _path, _fh, _mode)
-        Err(libc::ENOSYS)
+        self.inner.chmod(_req, _path, _fh.map(|x| get_for_fh(self.files, x)), _mode)
     }
 
     fn chown(&self, _req: RequestInfo, _path: &Path, _fh: Option<u64>, _uid: Option<u32>, _gid: Option<u32>) -> ResultEmpty {
-        // self.inner.chown(_req, _path, _fh, _uid, _gid)
-        Err(libc::ENOSYS)
+        self.inner.chown(_req, _path, _fh.map(|x| get_for_fh(self.files, x)), _uid, _gid)
     }
 
     fn truncate(&self, _req: RequestInfo, _path: &Path, _fh: Option<u64>, _size: u64) -> ResultEmpty {
-        // self.inner.truncate(_req, _path, _fh, _size)
-        Err(libc::ENOSYS)
+        self.inner.truncate(_req, _path, _fh.map(|x| get_for_fh(self.files, x)), _size)
     }
 
     fn utimens(&self, _req: RequestInfo, _path: &Path, _fh: Option<u64>, _atime: Option<Timespec>, _mtime: Option<Timespec>) -> ResultEmpty {
-        // self.inner.utimens(_req, _path, _fh, _atime, _mtime)
-        Err(libc::ENOSYS)
+        self.inner.utimens(_req, _path, _fh.map(|x| get_for_fh(self.files, x)), _atime, _mtime)
     }
 
     #[allow(unknown_lints, too_many_arguments)]
     fn utimens_macos(&self, _req: RequestInfo, _path: &Path, _fh: Option<u64>, _crtime: Option<Timespec>, _chgtime: Option<Timespec>, _bkuptime: Option<Timespec>, _flags: Option<u32>) -> ResultEmpty {
-        // self.inner.utimens_macos(_req, _path, _fh, _crtime, _chgtime, _bkuptime, _flags)
-        Err(libc::ENOSYS)
+        self.inner.utimens_macos(_req, _path, _fh.map(|x| get_for_fh(self.files, x)), _crtime, _chgtime, _bkuptime, _flags)
     }
 
     // END OF SETATTR FUNCTIONS
@@ -457,18 +466,15 @@ impl<T: FilesystemFL + Sync + Send + 'static> FilesystemMT for FuseFL<T> {
     }
 
     fn read(&self, _req: RequestInfo, _path: &Path, _fh: u64, _offset: u64, _size: u32) -> ResultData {
-        // self.inner.read(_req, _path, _fh, _offset, _size)
-        Err(libc::ENOSYS)
+        self.inner.read(_req, _path, get_for_fh(self.files, _fh), _offset, _size)
     }
 
     fn write(&self, _req: RequestInfo, _path: &Path, _fh: u64, _offset: u64, _data: Vec<u8>, _flags: u32) -> ResultWrite {
-        // self.inner.write(_req, _path, _fh, _offset, _data, _flags)
-        Err(libc::ENOSYS)
+        self.inner.write(_req, _path, get_for_fh(self.files, _fh), _offset, _data, _flags)
     }
 
     fn flush(&self, _req: RequestInfo, _path: &Path, _fh: u64, _lock_owner: u64) -> ResultEmpty {
-        // self.inner.flush(_req, _path, _fh, _lock_owner)
-        Err(libc::ENOSYS)
+        self.inner.flush(_req, _path, get_for_fh(self.files, _fh), _lock_owner)
     }
 
     fn release(&self, _req: RequestInfo, _path: &Path, _fh: u64, _flags: u32, _lock_owner: u64, _flush: bool) -> ResultEmpty {
@@ -477,8 +483,7 @@ impl<T: FilesystemFL + Sync + Send + 'static> FilesystemMT for FuseFL<T> {
     }
 
     fn fsync(&self, _req: RequestInfo, _path: &Path, _fh: u64, _datasync: bool) -> ResultEmpty {
-        // self.inner.fsync(_req, _path, _fh, _datasync)
-        Err(libc::ENOSYS)
+        self.inner.fsync(_req, _path, get_for_fh(self.files, _fh), _datasync)
     }
 
     fn opendir(&self, _req: RequestInfo, _path: &Path, _flags: u32) -> ResultOpen {
@@ -497,8 +502,7 @@ impl<T: FilesystemFL + Sync + Send + 'static> FilesystemMT for FuseFL<T> {
     }
 
     fn fsyncdir(&self, _req: RequestInfo, _path: &Path, _fh: u64, _datasync: bool) -> ResultEmpty {
-        // self.inner.fsyncdir(_req, _path, _fh, _datasync)
-        Err(libc::ENOSYS)
+        self.inner.fsyncdir(_req, _path, get_for_fh(self.dirs, _fh), _datasync)
     }
 
     fn statfs(&self, _req: RequestInfo, _path: &Path) -> ResultStatfs {

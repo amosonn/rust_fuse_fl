@@ -10,6 +10,8 @@
 extern crate fuse_mt;
 extern crate libc;
 
+mod fusefl;
+
 #[test]
 fn it_works() {
 }

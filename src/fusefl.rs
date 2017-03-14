@@ -452,8 +452,8 @@ impl<T: FilesystemFL + Sync + Send + 'static> FilesystemMT for FuseFL<T> {
     }
 
     fn open(&self, _req: RequestInfo, _path: &Path, _flags: u32) -> ResultOpen {
-        // self.inner.open(_req, _path, _flags)
-        Err(libc::ENOSYS)
+        let (fl, flags) = self.inner.open(_req, _path, _flags)?
+        Ok((self.files.insert(fl), flags))
     }
 
     fn read(&self, _req: RequestInfo, _path: &Path, _fh: u64, _offset: u64, _size: u32) -> ResultData {
@@ -469,8 +469,12 @@ impl<T: FilesystemFL + Sync + Send + 'static> FilesystemMT for FuseFL<T> {
     }
 
     fn release(&self, _req: RequestInfo, _path: &Path, _fh: u64, _flags: u32, _lock_owner: u64, _flush: bool) -> ResultEmpty {
-        // self.inner.release(_req, _path, _fh, _flags, _lock_owner, _flush)
-        Err(libc::ENOSYS)
+        let fl = self.files.remove(_fh).unwrap();
+        if _flush {
+            self.inner.flush(_req, _path, self.files.get(_fh).unwrap(), _lock_owner)
+        } else {
+            Ok(())
+        }
     }
 
     fn fsync(&self, _req: RequestInfo, _path: &Path, _fh: u64, _datasync: bool) -> ResultEmpty {
@@ -478,8 +482,8 @@ impl<T: FilesystemFL + Sync + Send + 'static> FilesystemMT for FuseFL<T> {
     }
 
     fn opendir(&self, _req: RequestInfo, _path: &Path, _flags: u32) -> ResultOpen {
-        // self.inner.opendir(_req, _path, _flags)
-        Err(libc::ENOSYS)
+        let (dl, flags) = self.inner.opendir(_req, _path, _flags)?
+        Ok((self.dirs.insert(fl), flags))
     }
 
     fn readdir(&self, _req: RequestInfo, _path: &Path, _fh: u64) -> ResultReaddir {
@@ -487,8 +491,8 @@ impl<T: FilesystemFL + Sync + Send + 'static> FilesystemMT for FuseFL<T> {
     }
 
     fn releasedir(&self, _req: RequestInfo, _path: &Path, _fh: u64, _flags: u32) -> ResultEmpty {
-        // self.inner.releasedir(_req, _path, _fh, _flags)
-        Err(libc::ENOSYS)
+        self.dirs.remove(_fh).unwrap();
+        Ok(())
     }
 
     fn fsyncdir(&self, _req: RequestInfo, _path: &Path, _fh: u64, _datasync: bool) -> ResultEmpty {
@@ -520,8 +524,18 @@ impl<T: FilesystemFL + Sync + Send + 'static> FilesystemMT for FuseFL<T> {
     }
 
     fn create(&self, _req: RequestInfo, _parent: &Path, _name: &OsStr, _mode: u32, _flags: u32) -> ResultCreate {
-        // self.inner.create(_req, _parent, _name, _mode, _flags)
-        Err(libc::ENOSYS)
+        let CreatedEntryObj {
+            ttl,
+            attr,
+            fl,
+            flags,
+        } = self.inner.create(_req, _parent, _name, _mode, _flags)?
+        Ok(CreatedEntry {
+            ttl: ttl,
+            attr: attr,
+            fh: self.files.insert(fl),
+            flags: flags,
+        })
     }
 
     // getlk

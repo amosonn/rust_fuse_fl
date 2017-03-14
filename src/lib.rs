@@ -11,6 +11,7 @@ extern crate fuse_mt;
 extern crate libc;
 
 mod fusefl;
+mod handler_table;
 
 #[test]
 fn it_works() {

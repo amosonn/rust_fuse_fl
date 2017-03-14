@@ -473,6 +473,7 @@ impl<T: FilesystemFL + Sync + Send + 'static> FilesystemMT for FuseFL<T> {
         if _flush {
             self.inner.flush(_req, _path, self.files.get(_fh).unwrap(), _lock_owner)
         } else {
+            // TODO: handle unlocking anyway.
             Ok(())
         }
     }

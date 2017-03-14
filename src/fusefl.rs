@@ -483,8 +483,7 @@ impl<T: FilesystemFL + Sync + Send + 'static> FilesystemMT for FuseFL<T> {
     }
 
     fn readdir(&self, _req: RequestInfo, _path: &Path, _fh: u64) -> ResultReaddir {
-        // self.inner.readdir(_req, _path, _fh)
-        Err(libc::ENOSYS)
+        self.inner.readdir(_req, _path, self.dirs.get(_fh).unwrap())
     }
 
     fn releasedir(&self, _req: RequestInfo, _path: &Path, _fh: u64, _flags: u32) -> ResultEmpty {

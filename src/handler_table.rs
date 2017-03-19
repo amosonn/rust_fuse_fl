@@ -24,8 +24,8 @@ impl<T> HandlerTable<T> {
     }
 
     /// Get the object associated with a file handler, if it exists.
-    pub fn get(&self, fh: u64) -> Option<T> {
-        self.inner.read().unwrap().1.get(fh)
+    pub fn get(&self, fh: u64) -> Option<&T> {
+        self.inner.read().unwrap().1.get(&fh)
     }
 
     /// Insert a new object, returning the file handler generated for it.
@@ -38,6 +38,6 @@ impl<T> HandlerTable<T> {
 
     /// Remove an object associated with a file handler, if it exists.
     pub fn remove(&self, fh: u64) -> Option<T> {
-        self.inner.write().unwrap().1.remove(fh)
+        self.inner.write().unwrap().1.remove(&fh)
     }
 }

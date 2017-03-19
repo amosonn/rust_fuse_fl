@@ -14,30 +14,39 @@ use std::sync::RwLock;
 /// Table for storing objects for handlers, and issuing handlers for new objects, all available via
 /// inner mutability.
 pub struct HandlerTable<T> {
-    inner: RwLock<(u64, HashMap<u64, T>)>,
+    inner: RwLock<InnerTable<T>>,
+}
+
+struct InnerTable<T> {
+    next_fh: u64,
+    map: HashMap<u64, T>,
 }
 
 impl<T> HandlerTable<T> {
     /// Create a new, empty HandlerTable.
     pub fn new() -> HandlerTable<T> {
-        HandlerTable{ inner: RwLock::new((0, HashMap::new())) }
+        HandlerTable { inner: RwLock::new(InnerTable { 
+            next_fh: 0, 
+            map: HashMap::new(),
+        } ) }
     }
 
     /// Get the object associated with a file handler, if it exists.
     pub fn get(&self, fh: u64) -> Option<&T> {
-        self.inner.read().unwrap().1.get(&fh)
+        self.inner.read().unwrap().map.get(&fh)
     }
 
     /// Insert a new object, returning the file handler generated for it.
     pub fn insert(&self, obj: T) -> u64 {
-        let (fh, map) = self.inner.write().unwrap();
-        assert!(map.insert(fh, obj).is_none());
-        fh += 1;
-        fh - 1
+        let mut inner = self.inner.write().unwrap();
+        let InnerTable { next_fh: ref mut fh, map: ref mut map } = *inner;
+        assert!(map.insert(*fh, obj).is_none());
+        *fh += 1;
+        *fh - 1
     }
 
     /// Remove an object associated with a file handler, if it exists.
     pub fn remove(&self, fh: u64) -> Option<T> {
-        self.inner.write().unwrap().1.remove(&fh)
+        self.inner.write().unwrap().map.remove(&fh)
     }
 }

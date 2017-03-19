@@ -30,7 +30,7 @@ impl HandlerTable<T> {
 
     /// Insert a new object, returning the file handler generated for it.
     pub fn insert(&self, obj: T) -> u64 {
-        let (fh: &mut u64, map: &mut HashMap) = self.inner.write().unwrap();
+        let (fh, map) = self.inner.write().unwrap();
         assert!(map.insert(fh, obj).is_none());
         fh += 1;
         fh - 1

@@ -376,7 +376,7 @@ impl<T> FuseFL<T> {
 
 
 impl<T: FilesystemFL + Sync + Send + 'static> FilesystemMT for FuseFL<T> {
-}
+
     fn init(&self, _req: RequestInfo) -> ResultEmpty {
         self.inner.init(_req)
     }
@@ -452,7 +452,7 @@ impl<T: FilesystemFL + Sync + Send + 'static> FilesystemMT for FuseFL<T> {
     }
 
     fn open(&self, _req: RequestInfo, _path: &Path, _flags: u32) -> ResultOpen {
-        let (fl, flags) = self.inner.open(_req, _path, _flags)?
+        let (fl, flags) = self.inner.open(_req, _path, _flags)?;
         Ok((self.files.insert(fl), flags))
     }
 
@@ -483,7 +483,7 @@ impl<T: FilesystemFL + Sync + Send + 'static> FilesystemMT for FuseFL<T> {
     }
 
     fn opendir(&self, _req: RequestInfo, _path: &Path, _flags: u32) -> ResultOpen {
-        let (dl, flags) = self.inner.opendir(_req, _path, _flags)?
+        let (dl, flags) = self.inner.opendir(_req, _path, _flags)?;
         Ok((self.dirs.insert(fl), flags))
     }
 
@@ -530,7 +530,7 @@ impl<T: FilesystemFL + Sync + Send + 'static> FilesystemMT for FuseFL<T> {
             attr,
             fl,
             flags,
-        } = self.inner.create(_req, _parent, _name, _mode, _flags)?
+        } = self.inner.create(_req, _parent, _name, _mode, _flags)?;
         Ok(CreatedEntry {
             ttl: ttl,
             attr: attr,

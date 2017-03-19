@@ -9,6 +9,7 @@
 
 extern crate fuse_mt;
 extern crate libc;
+extern crate time;
 
 mod fusefl;
 mod handler_table;

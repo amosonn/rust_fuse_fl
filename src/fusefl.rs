@@ -9,6 +9,10 @@
 
 use fuse_mt::*;
 use libc;
+use time::Timespec;
+  
+use std::ffi::OsStr;
+use std::path::Path;
 
 use super::handler_table::HandlerTable;
 

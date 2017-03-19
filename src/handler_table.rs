@@ -17,7 +17,7 @@ pub struct HandlerTable<T> {
     inner: RwLock<(u64, HashMap<u64, T>)>,
 }
 
-impl HandlerTable<T> {
+impl<T> HandlerTable<T> {
     /// Create a new, empty HandlerTable.
     pub fn new() -> HandlerTable<T> {
         HandlerTable{ inner: RwLock::new((0, HashMap::new())) }

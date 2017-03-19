@@ -368,7 +368,7 @@ struct FuseFL<T> where T: FilesystemFL {
 }
 
 
-impl<T> FuseFL<T> {
+impl<T> FuseFL<T> where T: FilesystemFL {
     pub fn new(target_fs: T) -> FuseFL<T> {
         FuseFL {
             inner: target_fs,

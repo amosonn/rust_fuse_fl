@@ -488,7 +488,7 @@ impl<T: FilesystemFL + Sync + Send + 'static> FilesystemMT for FuseFL<T> {
 
     fn opendir(&self, _req: RequestInfo, _path: &Path, _flags: u32) -> ResultOpen {
         let (dl, flags) = self.inner.opendir(_req, _path, _flags)?;
-        Ok((self.dirs.insert(fl), flags))
+        Ok((self.dirs.insert(dl), flags))
     }
 
     fn readdir(&self, _req: RequestInfo, _path: &Path, _fh: u64) -> ResultReaddir {

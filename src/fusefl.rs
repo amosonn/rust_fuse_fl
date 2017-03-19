@@ -25,7 +25,7 @@ pub type ResultOpenObj<T> = Result<(T, u32), libc::c_int>;
 pub type ResultCreateObj<T> = Result<CreatedEntryObj<T>, libc::c_int>;
 
 
-/// This trait must be implemented to implement a filesystem with FuseMT.
+/// This trait must be implemented to implement a filesystem with FuseFL.
 pub trait FilesystemFL {
 
     type FileLike;

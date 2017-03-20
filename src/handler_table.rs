@@ -8,7 +8,9 @@
 //
 //
 use std::collections::HashMap;
-use std::sync::RwLock;
+use std::sync::{RwLock, RwLockReadGuard};
+use std::ops::Deref;
+use std::mem;
 
 
 /// Table for storing objects for handlers, and issuing handlers for new objects, all available via
@@ -22,6 +24,18 @@ struct InnerTable<T> {
     map: HashMap<u64, T>,
 }
 
+pub struct HandlerTableGetGuard<'a, T: 'a> {
+    map_guard: RwLockReadGuard<'a, InnerTable<T>>,
+    val: Option<&'a T>,
+}
+
+impl<'a, T> Deref for HandlerTableGetGuard<'a, T> {
+    type Target = Option<&'a T>;
+    fn deref(&self) -> &Option<&'a T> {
+        &self.val
+    }
+}
+
 impl<T> HandlerTable<T> {
     /// Create a new, empty HandlerTable.
     pub fn new() -> HandlerTable<T> {
@@ -32,8 +46,14 @@ impl<T> HandlerTable<T> {
     }
 
     /// Get the object associated with a file handler, if it exists.
-    pub fn get(&self, fh: u64) -> Option<&T> {
-        self.inner.read().unwrap().map.get(&fh)
+    pub fn get<'a>(&'a self, fh: u64) -> HandlerTableGetGuard<'a, T> {
+        let map_guard = self.inner.read().unwrap();
+        let val: Option<*const T> = map_guard.map.get(&fh).map(|x| x as *const T);
+        let val: Option<&'a T> = val.map(|x| unsafe { mem::transmute::<*const T, &'a T>(x) });
+        HandlerTableGetGuard {
+            map_guard: map_guard,
+            val: val,
+        }
     }
 
     /// Insert a new object, returning the file handler generated for it.

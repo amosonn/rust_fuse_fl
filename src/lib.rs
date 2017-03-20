@@ -14,6 +14,8 @@ extern crate time;
 mod fusefl;
 mod handler_table;
 
+pub use fusefl::*;
+
 #[test]
 fn it_works() {
 }

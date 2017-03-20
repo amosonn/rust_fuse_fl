@@ -361,7 +361,7 @@ pub trait FilesystemFL {
 }
 
 
-struct FuseFL<T> where T: FilesystemFL {
+pub struct FuseFL<T> where T: FilesystemFL {
     inner: T,
     files: HandlerTable<T::FileLike>,
     dirs: HandlerTable<T::DirLike>,

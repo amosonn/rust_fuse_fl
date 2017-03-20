@@ -475,7 +475,7 @@ impl<T: FilesystemFL + Sync + Send + 'static> FilesystemMT for FuseFL<T> {
     fn release(&self, _req: RequestInfo, _path: &Path, _fh: u64, _flags: u32, _lock_owner: u64, _flush: bool) -> ResultEmpty {
         let fl = self.files.remove(_fh).unwrap();
         if _flush {
-            self.inner.flush(_req, _path, self.files.get(_fh).unwrap(), _lock_owner)
+            self.inner.flush(_req, _path, &fl, _lock_owner)
         } else {
             // TODO: handle unlocking anyway.
             Ok(())

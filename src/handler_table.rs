@@ -24,6 +24,7 @@ struct InnerTable<T> {
     map: HashMap<u64, T>,
 }
 
+#[allow(dead_code)]
 pub struct HandlerTableGetGuard<'a, T: 'a> {
     map_guard: RwLockReadGuard<'a, InnerTable<T>>,
     val: Option<&'a T>,
@@ -59,7 +60,7 @@ impl<T> HandlerTable<T> {
     /// Insert a new object, returning the file handler generated for it.
     pub fn insert(&self, obj: T) -> u64 {
         let mut inner = self.inner.write().unwrap();
-        let InnerTable { next_fh: ref mut fh, map: ref mut map } = *inner;
+        let InnerTable { next_fh: ref mut fh, ref mut map } = *inner;
         assert!(map.insert(*fh, obj).is_none());
         *fh += 1;
         *fh - 1

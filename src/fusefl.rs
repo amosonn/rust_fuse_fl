@@ -394,31 +394,55 @@ impl<T: FilesystemFL + Sync + Send + 'static> FilesystemMT for FuseFL<T> {
     }
 
     fn getattr(&self, _req: RequestInfo, _path: &Path, _fh: Option<u64>) -> ResultGetattr {
-        self.inner.getattr(_req, _path, _fh.map(|x| self.files.get(x).unwrap()))
+        if let Some(_fh) = _fh {
+            self.inner.getattr(_req, _path, Some(self.files.get(_fh).unwrap()))
+        } else {
+            self.inner.getattr(_req, _path, None)
+        }
     }
 
     // The following operations in the FUSE C API are all one kernel call: setattr
     // We split them out to match the C API's behavior.
 
     fn chmod(&self, _req: RequestInfo, _path: &Path, _fh: Option<u64>, _mode: u32) -> ResultEmpty {
-        self.inner.chmod(_req, _path, _fh.map(|x| self.files.get(x).unwrap()), _mode)
+        if let Some(_fh) = _fh {
+            self.inner.chmod(_req, _path, Some(self.files.get(_fh).unwrap()), _mode)
+        } else {
+            self.inner.chmod(_req, _path, None, _mode)
+        }
     }
 
     fn chown(&self, _req: RequestInfo, _path: &Path, _fh: Option<u64>, _uid: Option<u32>, _gid: Option<u32>) -> ResultEmpty {
-        self.inner.chown(_req, _path, _fh.map(|x| self.files.get(x).unwrap()), _uid, _gid)
+        if let Some(_fh) = _fh {
+            self.inner.chown(_req, _path, Some(self.files.get(_fh).unwrap()), _uid, _gid)
+        } else {
+            self.inner.chown(_req, _path, None, _uid, _gid)
+        }
     }
 
     fn truncate(&self, _req: RequestInfo, _path: &Path, _fh: Option<u64>, _size: u64) -> ResultEmpty {
-        self.inner.truncate(_req, _path, _fh.map(|x| self.files.get(x).unwrap()), _size)
+        if let Some(_fh) = _fh {
+            self.inner.truncate(_req, _path, Some(self.files.get(_fh).unwrap()), _size)
+        } else {
+            self.inner.truncate(_req, _path, None, _size)
+        }
     }
 
     fn utimens(&self, _req: RequestInfo, _path: &Path, _fh: Option<u64>, _atime: Option<Timespec>, _mtime: Option<Timespec>) -> ResultEmpty {
-        self.inner.utimens(_req, _path, _fh.map(|x| self.files.get(x).unwrap()), _atime, _mtime)
+        if let Some(_fh) = _fh {
+            self.inner.utimens(_req, _path, Some(self.files.get(_fh).unwrap()), _atime, _mtime)
+        } else {
+            self.inner.utimens(_req, _path, None, _atime, _mtime)
+        }
     }
 
     #[allow(unknown_lints, too_many_arguments)]
     fn utimens_macos(&self, _req: RequestInfo, _path: &Path, _fh: Option<u64>, _crtime: Option<Timespec>, _chgtime: Option<Timespec>, _bkuptime: Option<Timespec>, _flags: Option<u32>) -> ResultEmpty {
-        self.inner.utimens_macos(_req, _path, _fh.map(|x| self.files.get(x).unwrap()), _crtime, _chgtime, _bkuptime, _flags)
+        if let Some(_fh) = _fh {
+            self.inner.utimens_macos(_req, _path, Some(self.files.get(_fh).unwrap()), _crtime, _chgtime, _bkuptime, _flags)
+        } else {
+            self.inner.utimens_macos(_req, _path, None, _crtime, _chgtime, _bkuptime, _flags)
+        }
     }
 
     // END OF SETATTR FUNCTIONS

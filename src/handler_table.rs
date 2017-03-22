@@ -9,7 +9,6 @@
 //
 use std::collections::HashMap;
 use std::sync::{RwLock, RwLockReadGuard};
-use std::ops::Deref;
 use std::mem;
 
 
@@ -27,13 +26,16 @@ struct InnerTable<T> {
 #[allow(dead_code)]
 pub struct HandlerTableGetGuard<'a, T: 'a> {
     map_guard: RwLockReadGuard<'a, InnerTable<T>>,
-    val: Option<&'a T>,
+    val: Option<*const T>,
 }
 
-impl<'a, T> Deref for HandlerTableGetGuard<'a, T> {
-    type Target = Option<&'a T>;
-    fn deref(&self) -> &Option<&'a T> {
-        &self.val
+impl<'a, T> HandlerTableGetGuard<'a, T> {
+    pub fn as_opt_ref<'b>(&'b self) -> Option<&'b T> {
+        unsafe { self.val.map(|x| mem::transmute::<*const T, &'b T>(x)) }
+    }
+
+    pub fn unwrap<'b>(&'b self) -> &'b T {
+        self.as_opt_ref().unwrap()
     }
 }
 
@@ -50,7 +52,6 @@ impl<T> HandlerTable<T> {
     pub fn get<'a>(&'a self, fh: u64) -> HandlerTableGetGuard<'a, T> {
         let map_guard = self.inner.read().unwrap();
         let val: Option<*const T> = map_guard.map.get(&fh).map(|x| x as *const T);
-        let val: Option<&'a T> = val.map(|x| unsafe { mem::transmute::<*const T, &'a T>(x) });
         HandlerTableGetGuard {
             map_guard: map_guard,
             val: val,

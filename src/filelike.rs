@@ -39,7 +39,7 @@ impl<R, _> ReadUnixExt for ReadWriteAdaptor<R, _> where R: ReadUnixExt {
 
 impl<_, W> WriteUnixExt for ReadWriteAdaptor<_, W> where W: WriteUnixExt {
     fn write_at(&self, buf: &[u8], offset: u64) -> Result<usize> {
-        self.reader.write_at(buf, offset)
+        self.writer.write_at(buf, offset)
     }
 
     fn flush(&self) -> Result<()> {

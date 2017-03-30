@@ -10,7 +10,7 @@
 use std::result;
 use libc;
 
-type Result<T> = Result<T, libc::c_int>;
+pub type Result<T> = result::Result<T, libc::c_int>;
 
 use super::fusefl::*;
 

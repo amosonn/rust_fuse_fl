@@ -14,7 +14,7 @@ use libc;
 
 type Result<T> = Result<T, libc::c_int>;
 
-use super::fusefl::ResultOpenObj;
+use super::fusefl::*;
 
 pub trait ReadUnixExt {
     fn read_at(&self, buf: &mut [u8], offset: u64) -> Result<usize>;
@@ -81,5 +81,34 @@ impl<_, W, RW> WriteUnixExt for ModalFileLike<_, W, RW> where
             WriteOnly(w) => w.write_at(buf, offset),
             ReadWrite(rw) => rw.write_at(buf, offset),
         }
+    }
+}
+
+// Part of this will become a default impl of FilesystemFL when RFC #1210 lands.
+pub trait FilesystemFLOpen {
+    type FileLike: ReadUnixExt+WriteUnixExt;
+
+    fn open(&self, _req: RequestInfo, _path: &Path, _flags: u32) -> ResultOpenObj<Self::FileLike> {
+        Err(libc::ENOSYS)
+    }
+
+    /// If this method is not implemented or under Linux kernel versions earlier than 2.6.15, the
+    /// mknod() and open() methods will be called instead.
+    fn create(&self, _req: RequestInfo, _parent: &Path, _name: &OsStr, _mode: u32, _flags: u32) -> ResultCreateObj<Self::FileLike> {
+        Err(libc::ENOSYS)
+    }
+
+    fn read(&self, _req: RequestInfo, _path: &Path, _fl: &Self::FileLike, _offset: u64, _size: u32) -> ResultData {
+        let mut vec = Vec<u8>::with_capacity(_size);
+        unsafe { vec.set_len(_size) };
+        let num_read = _fl.read_at(vec.as_mut_slice(), _offset)?;
+        assert!(num_read <= _size);
+        unsafe { vec.set_len(num_read) };
+        Ok(vec)
+    }
+
+    fn write(&self, _req: RequestInfo, _path: &Path, _fl: &Self::FileLike, _offset: u64, _data: Vec<u8>, _flags: u32) -> ResultWrite {
+        assert!(_data.len() <= u32::max_value());
+        _fl.write_at(vec.as_slice(), _offset).map(|x| x as u32)
     }
 }

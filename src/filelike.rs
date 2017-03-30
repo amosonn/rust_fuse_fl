@@ -14,11 +14,11 @@ pub type Result<T> = result::Result<T, libc::c_int>;
 
 use super::fusefl::*;
 
-pub trait ReadUnixExt {
+pub trait ReadFileLike {
     fn read_at(&self, buf: &mut [u8], offset: u64) -> Result<usize>;
 }
 
-pub trait WriteUnixExt {
+pub trait WriteFileLike {
     fn write_at(&self, buf: &[u8], offset: u64) -> Result<usize>;
 
     fn flush(&self) -> Result<()> {
@@ -31,13 +31,13 @@ pub struct ReadWriteAdaptor<R, W> {
     writer: W,
 }
 
-impl<R, _> ReadUnixExt for ReadWriteAdaptor<R, _> where R: ReadUnixExt {
+impl<R, _> ReadFileLike for ReadWriteAdaptor<R, _> where R: ReadFileLike {
     fn read_at(&self, buf: &mut [u8], offset: u64) -> Result<usize> {
         self.reader.read_at(buf, offset)
     }
 }
 
-impl<_, W> WriteUnixExt for ReadWriteAdaptor<_, W> where W: WriteUnixExt {
+impl<_, W> WriteFileLike for ReadWriteAdaptor<_, W> where W: WriteFileLike {
     fn write_at(&self, buf: &[u8], offset: u64) -> Result<usize> {
         self.writer.write_at(buf, offset)
     }
@@ -55,8 +55,8 @@ pub enum ModalFileLike<R, W, RW> {
 }
 
 
-impl<R, _, RW> ReadUnixExt for ModalFileLike<R, _, RW> where 
-    R: ReadUnixExt, RW: ReadUnixExt {
+impl<R, _, RW> ReadFileLike for ModalFileLike<R, _, RW> where 
+    R: ReadFileLike, RW: ReadFileLike {
     fn read_at(&self, buf: &mut [u8], offset: u64) -> Result<usize> {
         match self {
             ReadOnly(r) => r.read_at(buf, offset),
@@ -66,8 +66,8 @@ impl<R, _, RW> ReadUnixExt for ModalFileLike<R, _, RW> where
     }
 }
 
-impl<_, W, RW> WriteUnixExt for ModalFileLike<_, W, RW> where 
-    W: WriteUnixExt, RW: WriteUnixExt {
+impl<_, W, RW> WriteFileLike for ModalFileLike<_, W, RW> where 
+    W: WriteFileLike, RW: WriteFileLike {
     fn write_at(&self, buf: &[u8], offset: u64) -> Result<usize> {
         match self {
             ReadOnly(_) => Err(libc::EBADF),
@@ -87,7 +87,7 @@ impl<_, W, RW> WriteUnixExt for ModalFileLike<_, W, RW> where
 
 // Part of this will become a default impl of FilesystemFL when RFC #1210 lands.
 pub trait FilesystemFLOpen {
-    type FileLike: ReadUnixExt+WriteUnixExt;
+    type FileLike: ReadFileLike+WriteFileLike;
 
     fn open(&self, _req: RequestInfo, _path: &Path, _flags: u32) -> ResultOpenObj<Self::FileLike> {
         Err(libc::ENOSYS)

@@ -7,8 +7,6 @@
 // except according to those terms.
 //
 
-use std::io;
-use std::os::unix::fs::FileExt;
 use std::result;
 use libc;
 
@@ -22,20 +20,11 @@ pub trait ReadUnixExt {
 
 pub trait WriteUnixExt {
     fn write_at(&self, buf: &[u8], offset: u64) -> Result<usize>;
-}
 
-impl<T> ReadUnixExt for T where T: FileExt {
-    fn read_at(&self, buf: &mut [u8], offset: u64) -> Result<usize> {
-        FileExt::read_at(self, buf, offset).map_err(|e| e.raw_os_error().map_or_else(|| libc::EIO, |x| x as libc::c_int))
+    fn flush(&self) -> Result<()> {
+        Ok(())
     }
 }
-    
-impl<T> WriteUnixExt for T where T: FileExt {
-    fn write_at(&self, buf: &[u8], offset: u64) -> Result<usize> {
-        FileExt::write_at(self, buf, offset).map_err(|e| e.raw_os_error().map_or_else(|| libc::EIO, |x| x as libc::c_int))
-    }
-}
-
 
 pub struct ReadWriteAdaptor<R, W> {
     reader: R,
@@ -51,6 +40,10 @@ impl<R, _> ReadUnixExt for ReadWriteAdaptor<R, _> where R: ReadUnixExt {
 impl<_, W> WriteUnixExt for ReadWriteAdaptor<_, W> where W: WriteUnixExt {
     fn write_at(&self, buf: &[u8], offset: u64) -> Result<usize> {
         self.reader.write_at(buf, offset)
+    }
+
+    fn flush(&self) -> Result<()> {
+        self.writer.flush()
     }
 }
 
@@ -82,6 +75,14 @@ impl<_, W, RW> WriteUnixExt for ModalFileLike<_, W, RW> where
             ReadWrite(rw) => rw.write_at(buf, offset),
         }
     }
+
+    fn flush(&self) -> Result<()> {
+        match self {
+            ReadOnly(_) => Err(libc::EBADF),
+            WriteOnly(w) => w.flush(),
+            ReadWrite(rw) => rw.flush(),
+        }
+    }
 }
 
 // Part of this will become a default impl of FilesystemFL when RFC #1210 lands.
@@ -110,5 +111,9 @@ pub trait FilesystemFLOpen {
     fn write(&self, _req: RequestInfo, _path: &Path, _fl: &Self::FileLike, _offset: u64, _data: Vec<u8>, _flags: u32) -> ResultWrite {
         assert!(_data.len() <= u32::max_value());
         _fl.write_at(vec.as_slice(), _offset).map(|x| x as u32)
+    }
+
+    fn fsync(&self, _req: RequestInfo, _path: &Path, _fl: &Self::FileLike, _datasync: bool) -> ResultEmpty {
+        Err(libc::ENOSYS)
     }
 }

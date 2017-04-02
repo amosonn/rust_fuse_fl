@@ -85,6 +85,32 @@ impl<_, W, RW> WriteFileLike for ModalFileLike<_, W, RW> where
     }
 }
 
+pub trait FilesystemFLRwOpen {
+    type ReadLike: ReadFileLike;
+    type WriteLike: WriteFileLike;
+    type ReadWriteLike: ReadFileLike+WriteFileLike = ReadWriteAdaptor<Self::ReadLike, Self::WriteLike>;
+
+    fn open_read(&self, _req: RequestInfo, _path: &Path, _flags: u32) -> ResultOpenObj<Self::ReadLike> {
+        Err(libc::ENOSYS)
+    }
+
+    fn open_write(&self, _req: RequestInfo, _path: &Path, _flags: u32) -> ResultOpenObj<Self::WriteLike> {
+        Err(libc::ENOSYS)
+    }
+
+    fn open_readwrite(&self, _req: RequestInfo, _path: &Path, _flags: u32) -> ResultOpenObj<Self::ReadWriteLike> {
+        Err(libc::ENOSYS)
+    }
+
+    fn create_write(&self, _req: RequestInfo, _parent: &Path, _name: &OsStr, _mode: u32, _flags: u32) -> ResultCreateObj<Self::WriteLike> {
+        Err(libc::ENOSYS)
+    }
+
+    fn create_readwrite(&self, _req: RequestInfo, _parent: &Path, _name: &OsStr, _mode: u32, _flags: u32) -> ResultCreateObj<Self::ReadWriteLike> {
+        Err(libc::ENOSYS)
+    }
+}
+
 // Part of this will become a default impl of FilesystemFL when RFC #1210 lands.
 pub trait FilesystemFLOpen {
     type FileLike: ReadFileLike+WriteFileLike;

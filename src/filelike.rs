@@ -26,6 +26,24 @@ pub trait WriteFileLike {
     }
 }
 
+pub enum NoFile {};
+
+impl ReadFileLike for NoFile {
+    fn read_at(&self, buf: &mut [u8], offset: u64) -> Result<usize> {
+        Err(libc::ENOSYS)
+    }
+}
+
+impl WriteFileLike for NoFile {
+    fn write_at(&self, buf: &[u8], offset: u64) -> Result<usize> {
+        Err(libc::ENOSYS)
+    }
+
+    fn flush(&self) -> Result<()> {
+        Err(libc::ENOSYS)
+    }
+}
+
 pub struct ReadWriteAdaptor<R, W> {
     reader: R,
     writer: W,
@@ -86,8 +104,8 @@ impl<_, W, RW> WriteFileLike for ModalFileLike<_, W, RW> where
 }
 
 pub trait FilesystemFLRwOpen {
-    type ReadLike: ReadFileLike;
-    type WriteLike: WriteFileLike;
+    type ReadLike: ReadFileLike = NoFile;
+    type WriteLike: WriteFileLike = NoFile;
     type ReadWriteLike: ReadFileLike+WriteFileLike = ReadWriteAdaptor<Self::ReadLike, Self::WriteLike>;
 
     fn open_read(&self, _req: RequestInfo, _path: &Path, _flags: u32) -> ResultOpenObj<Self::ReadLike> {

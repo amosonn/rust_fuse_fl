@@ -166,6 +166,6 @@ pub trait FilesystemFLOpen {
     }
 
     fn fsync(&self, _req: RequestInfo, _path: &Path, _fl: &Self::FileLike, _datasync: bool) -> ResultEmpty {
-        Err(libc::ENOSYS)
+        _fl.flush()
     }
 }

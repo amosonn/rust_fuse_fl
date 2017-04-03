@@ -13,6 +13,7 @@ extern crate time;
 
 mod fusefl;
 mod handler_table;
+mod filelike;
 
 pub use fusefl::*;
 

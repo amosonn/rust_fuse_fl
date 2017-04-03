@@ -8,11 +8,14 @@
 //
 
 use std::result;
+use std::ffi::OsStr;
+use std::path::Path;
 use libc;
 
 pub type Result<T> = result::Result<T, libc::c_int>;
 
 use super::fusefl::*;
+use fuse_mt::*;
 
 pub trait ReadFileLike {
     fn read_at(&self, buf: &mut [u8], offset: u64) -> Result<usize>;
@@ -26,14 +29,16 @@ pub trait WriteFileLike {
     }
 }
 
-pub enum NoFile {};
+pub enum NoFile {}
 
+#[allow(unused_variables)]
 impl ReadFileLike for NoFile {
     fn read_at(&self, buf: &mut [u8], offset: u64) -> Result<usize> {
         Err(libc::ENOSYS)
     }
 }
 
+#[allow(unused_variables)]
 impl WriteFileLike for NoFile {
     fn write_at(&self, buf: &[u8], offset: u64) -> Result<usize> {
         Err(libc::ENOSYS)
@@ -49,13 +54,13 @@ pub struct ReadWriteAdaptor<R, W> {
     writer: W,
 }
 
-impl<R, _> ReadFileLike for ReadWriteAdaptor<R, _> where R: ReadFileLike {
+impl<R, W> ReadFileLike for ReadWriteAdaptor<R, W> where R: ReadFileLike {
     fn read_at(&self, buf: &mut [u8], offset: u64) -> Result<usize> {
         self.reader.read_at(buf, offset)
     }
 }
 
-impl<_, W> WriteFileLike for ReadWriteAdaptor<_, W> where W: WriteFileLike {
+impl<R, W> WriteFileLike for ReadWriteAdaptor<R, W> where W: WriteFileLike {
     fn write_at(&self, buf: &[u8], offset: u64) -> Result<usize> {
         self.writer.write_at(buf, offset)
     }
@@ -72,41 +77,43 @@ pub enum ModalFileLike<R, W, RW> {
     ReadWrite(RW),
 }
 
+use self::ModalFileLike::*;
 
-impl<R, _, RW> ReadFileLike for ModalFileLike<R, _, RW> where 
+
+impl<R, W, RW> ReadFileLike for ModalFileLike<R, W, RW> where 
     R: ReadFileLike, RW: ReadFileLike {
     fn read_at(&self, buf: &mut [u8], offset: u64) -> Result<usize> {
-        match self {
-            ReadOnly(r) => r.read_at(buf, offset),
+        match *self {
+            ReadOnly(ref r) => r.read_at(buf, offset),
             WriteOnly(_) => Err(libc::EBADF),
-            ReadWrite(rw) => rw.read_at(buf, offset),
+            ReadWrite(ref rw) => rw.read_at(buf, offset),
         }
     }
 }
 
-impl<_, W, RW> WriteFileLike for ModalFileLike<_, W, RW> where 
+impl<R, W, RW> WriteFileLike for ModalFileLike<R, W, RW> where 
     W: WriteFileLike, RW: WriteFileLike {
     fn write_at(&self, buf: &[u8], offset: u64) -> Result<usize> {
-        match self {
+        match *self {
             ReadOnly(_) => Err(libc::EBADF),
-            WriteOnly(w) => w.write_at(buf, offset),
-            ReadWrite(rw) => rw.write_at(buf, offset),
+            WriteOnly(ref w) => w.write_at(buf, offset),
+            ReadWrite(ref rw) => rw.write_at(buf, offset),
         }
     }
 
     fn flush(&self) -> Result<()> {
-        match self {
+        match *self {
             ReadOnly(_) => Err(libc::EBADF),
-            WriteOnly(w) => w.flush(),
-            ReadWrite(rw) => rw.flush(),
+            WriteOnly(ref w) => w.flush(),
+            ReadWrite(ref rw) => rw.flush(),
         }
     }
 }
 
 pub trait FilesystemFLRwOpen {
-    type ReadLike: ReadFileLike = NoFile;
-    type WriteLike: WriteFileLike = NoFile;
-    type ReadWriteLike: ReadFileLike+WriteFileLike = ReadWriteAdaptor<Self::ReadLike, Self::WriteLike>;
+    type ReadLike: ReadFileLike; // = NoFile;
+    type WriteLike: WriteFileLike; // = NoFile;
+    type ReadWriteLike: ReadFileLike+WriteFileLike; // = ReadWriteAdaptor<Self::ReadLike, Self::WriteLike>;
 
     fn open_read(&self, _req: RequestInfo, _path: &Path, _flags: u32) -> ResultOpenObj<Self::ReadLike> {
         Err(libc::ENOSYS)
@@ -144,7 +151,8 @@ pub trait FilesystemFLOpen {
     }
 
     fn read(&self, _req: RequestInfo, _path: &Path, _fl: &Self::FileLike, _offset: u64, _size: u32) -> ResultData {
-        let mut vec = Vec<u8>::with_capacity(_size);
+        let _size = _size as usize;
+        let mut vec = Vec::<u8>::with_capacity(_size);
         unsafe { vec.set_len(_size) };
         let num_read = _fl.read_at(vec.as_mut_slice(), _offset)?;
         assert!(num_read <= _size);
@@ -153,8 +161,8 @@ pub trait FilesystemFLOpen {
     }
 
     fn write(&self, _req: RequestInfo, _path: &Path, _fl: &Self::FileLike, _offset: u64, _data: Vec<u8>, _flags: u32) -> ResultWrite {
-        assert!(_data.len() <= u32::max_value());
-        _fl.write_at(vec.as_slice(), _offset).map(|x| x as u32)
+        assert!(_data.len() <= u32::max_value() as usize);
+        _fl.write_at(_data.as_slice(), _offset).map(|x| x as u32)
     }
 
     fn fsync(&self, _req: RequestInfo, _path: &Path, _fl: &Self::FileLike, _datasync: bool) -> ResultEmpty {

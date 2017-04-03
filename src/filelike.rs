@@ -127,6 +127,10 @@ pub trait FilesystemFLRwOpen {
         Err(libc::ENOSYS)
     }
 
+    fn create_read(&self, _req: RequestInfo, _parent: &Path, _name: &OsStr, _mode: u32, _flags: u32) -> ResultCreateObj<Self::ReadLike> {
+        Err(libc::ENOSYS)
+    }
+
     fn create_write(&self, _req: RequestInfo, _parent: &Path, _name: &OsStr, _mode: u32, _flags: u32) -> ResultCreateObj<Self::WriteLike> {
         Err(libc::ENOSYS)
     }

@@ -173,12 +173,18 @@ pub trait FilesystemFLOpen {
 }
 
 // Part of this will become a default impl of FilesystemFL when RFC #1210 lands.
-impl FilesystemFLOpen for T where T: FilesystemFLRwOpen {
+impl<T> FilesystemFLOpen for T where T: FilesystemFLRwOpen {
+    type FileLike = ModalFileLike<
+        <Self as FilesystemFLRwOpen>::ReadLike,
+        <Self as FilesystemFLRwOpen>::WriteLike,
+        <Self as FilesystemFLRwOpen>::ReadWriteLike,
+    >;
+
     fn open(&self, _req: RequestInfo, _path: &Path, _flags: u32) -> ResultOpenObj<Self::FileLike> {
-        match (_flags & libc::O_ACCMODE) {
-            libc::RDONLY => self.open_read(_req, _path, _flags),
-            libc::WRONLY => self.open_write(_req, _path, _flags),
-            libc::RDWR => self.open_readwrite(_req, _path, _flags),
+        match _flags as i32 & libc::O_ACCMODE {
+            libc::O_RDONLY => map_res_open(self.open_read(_req, _path, _flags), |fl| ReadOnly(fl)),
+            libc::O_WRONLY => map_res_open(self.open_write(_req, _path, _flags), |fl| WriteOnly(fl)),
+            libc::O_RDWR => map_res_open(self.open_readwrite(_req, _path, _flags), |fl| ReadWrite(fl)),
             _ => Err(libc::EINVAL),
         }
     }
@@ -186,10 +192,10 @@ impl FilesystemFLOpen for T where T: FilesystemFLRwOpen {
     /// If this method is not implemented or under Linux kernel versions earlier than 2.6.15, the
     /// mknod() and open() methods will be called instead.
     fn create(&self, _req: RequestInfo, _parent: &Path, _name: &OsStr, _mode: u32, _flags: u32) -> ResultCreateObj<Self::FileLike> {
-        match (_flags & libc::O_ACCMODE) {
-            libc::RDONLY => self.create_read(_req, _parent, _name, _mode, _flags),
-            libc::WRONLY => self.create_write(_req, _parent, _name, _mode, _flags),
-            libc::RDWR => self.create_readwrite(_req, _parent, _name, _mode, _flags),
+        match _flags as i32 & libc::O_ACCMODE {
+            libc::O_RDONLY => map_res_create(self.create_read(_req, _parent, _name, _mode, _flags), |fl| ReadOnly(fl)),
+            libc::O_WRONLY => map_res_create(self.create_write(_req, _parent, _name, _mode, _flags), |fl| WriteOnly(fl)),
+            libc::O_RDWR => map_res_create(self.create_readwrite(_req, _parent, _name, _mode, _flags), |fl| ReadWrite(fl)),
             _ => Err(libc::EINVAL),
         }
     }

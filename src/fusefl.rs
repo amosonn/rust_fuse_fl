@@ -29,6 +29,24 @@ pub struct CreatedEntryObj<T> {
 pub type ResultOpenObj<T> = Result<(T, u32)>;
 pub type ResultCreateObj<T> = Result<CreatedEntryObj<T>>;
 
+pub fn map_res_open<T, S, F>(this: ResultOpenObj<T>, f: F) -> ResultOpenObj<S> where F: FnOnce(T) -> S {
+    this.map(|x| (f(x.0), x.1))
+}
+
+pub fn map_res_create<T, S, F>(this: ResultCreateObj<T>, f: F) -> ResultCreateObj<S> where F: FnOnce(T) -> S {
+    match this {
+        Ok(CreatedEntryObj { ttl, attr, fl, flags }) => Ok(CreatedEntryObj { ttl, attr, fl: f(fl), flags }),
+        Err(e) => Err(e),
+    }
+}
+
+pub fn map_res_create2<T, F>(this: ResultCreateObj<T>, f: F) -> ResultCreate where F: FnOnce(T) -> u64 {
+    match this {
+        Ok(CreatedEntryObj { ttl, attr, fl, flags }) => Ok(CreatedEntry { ttl, attr, fh: f(fl), flags }),
+        Err(e) => Err(e),
+    }
+}
+
 
 /// This trait must be implemented to implement a filesystem with FuseFL.
 pub trait FilesystemFL {
@@ -481,8 +499,7 @@ impl<T: FilesystemFL + Sync + Send + 'static> FilesystemMT for FuseFL<T> {
     }
 
     fn open(&self, _req: RequestInfo, _path: &Path, _flags: u32) -> ResultOpen {
-        let (fl, flags) = self.inner.open(_req, _path, _flags)?;
-        Ok((self.files.insert(fl), flags))
+        map_res_open(self.inner.open(_req, _path, _flags), |fl| self.files.insert(fl))
     }
 
     fn read(&self, _req: RequestInfo, _path: &Path, _fh: u64, _offset: u64, _size: u32) -> ResultData {
@@ -512,8 +529,7 @@ impl<T: FilesystemFL + Sync + Send + 'static> FilesystemMT for FuseFL<T> {
     }
 
     fn opendir(&self, _req: RequestInfo, _path: &Path, _flags: u32) -> ResultOpen {
-        let (dl, flags) = self.inner.opendir(_req, _path, _flags)?;
-        Ok((self.dirs.insert(dl), flags))
+        map_res_open(self.inner.opendir(_req, _path, _flags), |dl| self.dirs.insert(dl))
     }
 
     fn readdir(&self, _req: RequestInfo, _path: &Path, _fh: u64) -> ResultReaddir {
@@ -554,18 +570,7 @@ impl<T: FilesystemFL + Sync + Send + 'static> FilesystemMT for FuseFL<T> {
     }
 
     fn create(&self, _req: RequestInfo, _parent: &Path, _name: &OsStr, _mode: u32, _flags: u32) -> ResultCreate {
-        let CreatedEntryObj {
-            ttl,
-            attr,
-            fl,
-            flags,
-        } = self.inner.create(_req, _parent, _name, _mode, _flags)?;
-        Ok(CreatedEntry {
-            ttl: ttl,
-            attr: attr,
-            fh: self.files.insert(fl),
-            flags: flags,
-        })
+        map_res_create2(self.inner.create(_req, _parent, _name, _mode, _flags), |fl| self.files.insert(fl))
     }
 
     // getlk

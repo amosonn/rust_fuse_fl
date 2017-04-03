@@ -7,15 +7,13 @@
 // except according to those terms.
 //
 
-use std::result;
 use std::ffi::OsStr;
 use std::path::Path;
 use libc;
 
-pub type Result<T> = result::Result<T, libc::c_int>;
-
 use super::fusefl::*;
 use fuse_mt::*;
+use super::Result;
 
 pub trait ReadFileLike {
     fn read_at(&self, buf: &mut [u8], offset: u64) -> Result<usize>;

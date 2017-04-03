@@ -15,6 +15,7 @@ use std::ffi::OsStr;
 use std::path::Path;
 
 use super::handler_table::HandlerTable;
+use super::Result;
 
 /// The return value for `create`: contains info on the newly-created file, as well as a FileLike
 /// object to handle the opened file.
@@ -25,8 +26,8 @@ pub struct CreatedEntryObj<T> {
     pub flags: u32,
 }
 
-pub type ResultOpenObj<T> = Result<(T, u32), libc::c_int>;
-pub type ResultCreateObj<T> = Result<CreatedEntryObj<T>, libc::c_int>;
+pub type ResultOpenObj<T> = Result<(T, u32)>;
+pub type ResultCreateObj<T> = Result<CreatedEntryObj<T>>;
 
 
 /// This trait must be implemented to implement a filesystem with FuseFL.

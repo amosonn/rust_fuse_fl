@@ -173,3 +173,27 @@ pub trait FilesystemFLOpen {
         _fl.flush()
     }
 }
+
+// Part of this will become a default impl of FilesystemFL when RFC #1210 lands.
+impl FilesystemFLOpen for T where T: FilesystemFLRwOpen {
+    fn open(&self, _req: RequestInfo, _path: &Path, _flags: u32) -> ResultOpenObj<Self::FileLike> {
+        match (_flags & libc::O_ACCMODE) {
+            libc::RDONLY => self.open_read(_req, _path, _flags),
+            libc::WRONLY => self.open_write(_req, _path, _flags),
+            libc::RDWR => self.open_readwrite(_req, _path, _flags),
+            _ => Err(libc::EINVAL),
+        }
+    }
+
+    /// If this method is not implemented or under Linux kernel versions earlier than 2.6.15, the
+    /// mknod() and open() methods will be called instead.
+    fn create(&self, _req: RequestInfo, _parent: &Path, _name: &OsStr, _mode: u32, _flags: u32) -> ResultCreateObj<Self::FileLike> {
+        match (_flags & libc::O_ACCMODE) {
+            libc::RDONLY => self.create_read(_req, _parent, _name, _mode, _flags),
+            libc::WRONLY => self.create_write(_req, _parent, _name, _mode, _flags),
+            libc::RDWR => self.create_readwrite(_req, _parent, _name, _mode, _flags),
+            _ => Err(libc::EINVAL),
+        }
+    }
+}
+

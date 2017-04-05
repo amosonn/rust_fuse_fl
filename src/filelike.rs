@@ -156,6 +156,14 @@ pub trait FilesystemFLRwOpen {
     fn create_readwrite(&self, _req: RequestInfo, _parent: &Path, _name: &OsStr, _mode: u32, _flags: u32) -> ResultCreateObj<Self::ReadWriteLike> {
         Err(libc::ENOSYS)
     }
+
+    fn fsync_metadata(&self, _req: RequestInfo, _path: &Path, _fl: &ModalFileLike<
+        Self::ReadLike,
+        Self::WriteLike,
+        Self::ReadWriteLike,
+    >) -> ResultEmpty {
+        Err(libc::ENOSYS)
+    }
 }
 
 // Part of this will become a default impl of FilesystemFL when RFC #1210 lands.
@@ -188,7 +196,16 @@ pub trait FilesystemFLOpen {
     }
 
     fn fsync(&self, _req: RequestInfo, _path: &Path, _fl: &Self::FileLike, _datasync: bool) -> ResultEmpty {
-        _fl.flush()
+        _fl.flush()?;
+        if !_datasync {
+            self.fsync_metadata(_req, _path, _fl)
+        } else {
+            Ok(())
+        }
+    }
+
+    fn fsync_metadata(&self, _req: RequestInfo, _path: &Path, _fl: &Self::FileLike) -> ResultEmpty {
+        Err(libc::ENOSYS)
     }
 }
 
@@ -218,6 +235,10 @@ impl<T> FilesystemFLOpen for T where T: FilesystemFLRwOpen {
             libc::O_RDWR => map_res_create(self.create_readwrite(_req, _parent, _name, _mode, _flags), |fl| ReadWrite(fl)),
             _ => Err(libc::EINVAL),
         }
+    }
+
+    fn fsync_metadata(&self, _req: RequestInfo, _path: &Path, _fl: &Self::FileLike) -> ResultEmpty {
+        FilesystemFLRwOpen::fsync_metadata(self, _req, _path, _fl)
     }
 }
 

@@ -7,6 +7,8 @@
 // except according to those terms.
 //
 
+use std::fs::File;
+use std::os::unix::fs::FileExt;
 use std::ffi::OsStr;
 use std::path::Path;
 use libc;
@@ -22,6 +24,24 @@ pub trait ReadFileLike {
 pub trait WriteFileLike {
     fn write_at(&self, buf: &[u8], offset: u64) -> Result<usize>;
 
+    fn flush(&self) -> Result<()> {
+        Ok(())
+    }
+}
+
+impl ReadFileLike for File {
+    fn read_at(&self, buf: &mut [u8], offset: u64) -> Result<usize> {
+        FileExt::read_at(self, buf, offset).map_err(|x| x.raw_os_error().unwrap())
+    }
+}
+
+impl WriteFileLike for File {
+    fn write_at(&self, buf: &[u8], offset: u64) -> Result<usize> {
+        FileExt::write_at(self, buf, offset).map_err(|x| x.raw_os_error().unwrap())
+    }
+
+    // NOTE: we can't use the flush method from Write, because that wants a &mut. However, for now
+    // File's impl of flush is the same as ours, Ok(()), so we can stick with that.
     fn flush(&self) -> Result<()> {
         Ok(())
     }

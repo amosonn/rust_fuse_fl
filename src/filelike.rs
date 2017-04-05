@@ -17,13 +17,29 @@ use super::fusefl::*;
 use fuse_mt::*;
 use super::Result;
 
+/// Trait to be implemented for providing the "reader" functionality, to be used with
+/// FilesystemFLOpen or FilesystemFLRwOpen.
 pub trait ReadFileLike {
+    /// Read data.
+    /// Read should send exactly the number of bytes requested except on EOF or error,
+    /// otherwise the rest of the data will be substituted with zeroes. An exception to
+    /// this is when the file has been opened in 'direct_io' mode, in which case the
+    /// return value of the read system call will reflect the return value of this
+    /// operation.
     fn read_at(&self, buf: &mut [u8], offset: u64) -> Result<usize>;
 }
 
+/// Trait to be implemented for providing the "writer" functionality, to be used with
+/// FilesystemFLOpen or FilesystemFLRwOpen.
 pub trait WriteFileLike {
+    /// Write data.
+    /// Write should return exactly the number of bytes requested except on error. An
+    /// exception to this is when the file has been opened in 'direct_io' mode, in
+    /// which case the return value of the write system call will reflect the return
+    /// value of this operation.
     fn write_at(&self, buf: &[u8], offset: u64) -> Result<usize>;
 
+    /// Synchronize file contents.
     fn flush(&self) -> Result<()> {
         Ok(())
     }
@@ -47,6 +63,8 @@ impl WriteFileLike for File {
     }
 }
 
+/// Empty type for using with FilesystemFLRwOpen as the WriteLike and ReadWriteLike for readonly
+/// fs-s (or the similar parallel for writeonly ones).
 pub enum NoFile {}
 
 #[allow(unused_variables)]
@@ -67,6 +85,8 @@ impl WriteFileLike for NoFile {
     }
 }
 
+/// Naive implementation of a read-write FileLike, given a read FileLike and
+/// a write FileLike implementation.
 pub struct ReadWriteAdaptor<R, W> {
     reader: R,
     writer: W,
@@ -88,7 +108,9 @@ impl<R, W> WriteFileLike for ReadWriteAdaptor<R, W> where W: WriteFileLike {
     }
 }
 
-
+/// Implementation of a FileLike which can be either read-only, write-only or read-write.
+/// Implementes both the ReadLike and WriteLike, returning EBADF in case of trying to write to a
+/// read-only file or vice-versa (just like you'd expect).
 pub enum ModalFileLike<R, W, RW> {
     ReadOnly(R),
     WriteOnly(W),
@@ -128,6 +150,13 @@ impl<R, W, RW> WriteFileLike for ModalFileLike<R, W, RW> where
     }
 }
 
+/// Trait for using different types for the read, write and read-write files. The read-write type
+/// can be a ReadWriteAdaptor over the read and write ones.
+/// Everything implementing this implements FilesystemFLOpen, dispatching the open and create calls
+/// according to the ACCMODE to the open or create method for the right type of file.
+/// NOTE: fsync_metadata is not dispatched, but rather gets an enum over the possible file types,
+/// because persumably the synchronization of metadata is mostly unaffected by how the file was
+/// opened.
 pub trait FilesystemFLRwOpen {
     type ReadLike: ReadFileLike; // = NoFile;
     type WriteLike: WriteFileLike; // = NoFile;
@@ -166,6 +195,11 @@ pub trait FilesystemFLRwOpen {
     }
 }
 
+/// Trait for standard usecase of FilesystemFL - open and create methods return a FileLike object,
+/// which supports reading, writing and flushing of data, and then these calls are passed directly
+/// to it. Once specialization (RFC #1210) lands, this will be integrated as a default impl of
+/// FilesystemFL for types implementing this; for now, this repeats some methods from FilesystemFL,
+/// and these should be manually called in the implementation of FilesystemFL.
 // Part of this will become a default impl of FilesystemFL when RFC #1210 lands.
 pub trait FilesystemFLOpen {
     type FileLike: ReadFileLike+WriteFileLike;

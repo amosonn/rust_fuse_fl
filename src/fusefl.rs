@@ -51,7 +51,9 @@ pub fn map_res_create2<T, F>(this: ResultCreateObj<T>, f: F) -> ResultCreate whe
 /// This trait must be implemented to implement a filesystem with FuseFL.
 pub trait FilesystemFL {
 
+    /// The type for objects returned by open/create and used by read, etc.
     type FileLike;
+    /// The type for objects returned by opendir and used by readdir, etc.
     type DirLike;
 
     /// Called on mount, before any other function.

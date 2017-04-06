@@ -8,6 +8,9 @@
 //
 
 use std::fs::File;
+use std::cmp::min;
+use std::cell::RefCell;
+use std::sync::{Mutex, RwLock};
 use std::os::unix::fs::FileExt;
 use std::ffi::OsStr;
 use std::path::Path;
@@ -60,6 +63,42 @@ impl WriteFileLike for File {
     // File's impl of flush is the same as ours, Ok(()), so we can stick with that.
     fn flush(&self) -> Result<()> {
         Ok(())
+    }
+}
+
+impl ReadFileLike for [u8] {
+    fn read_at(&self, buf: &mut [u8], offset: u64) -> Result<usize> {
+        if offset > usize::max_value() as u64 { return Ok(0); }
+        let offset = offset as usize;
+        let len = min(buf.len(), self.len() - offset);
+        buf[..len].copy_from_slice(&self[offset..offset+len]);
+        Ok(len)
+    }
+}
+
+fn do_write_at(this: &mut [u8], buf: &[u8], offset: u64) -> usize {
+    if offset > usize::max_value() as u64 { return 0; }
+    let offset = offset as usize;
+    let len = min(buf.len(), this.len() - offset);
+    this[offset..offset+len].copy_from_slice(&buf[..len]);
+    len
+}
+
+impl WriteFileLike for RefCell<[u8]> {
+    fn write_at(&self, buf: &[u8], offset: u64) -> Result<usize> {
+        Ok(do_write_at(&mut *self.borrow_mut(), buf, offset))
+    }
+}
+
+impl WriteFileLike for Mutex<[u8]> {
+    fn write_at(&self, buf: &[u8], offset: u64) -> Result<usize> {
+        Ok(do_write_at(&mut *self.lock().unwrap(), buf, offset))
+    }
+}
+
+impl WriteFileLike for RwLock<[u8]> {
+    fn write_at(&self, buf: &[u8], offset: u64) -> Result<usize> {
+        Ok(do_write_at(&mut *self.write().unwrap(), buf, offset))
     }
 }
 

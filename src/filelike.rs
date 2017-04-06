@@ -70,6 +70,12 @@ impl WriteFileLike for File {
 
 impl ReadFileLike for [u8] {
     fn read_at(&self, buf: &mut [u8], offset: u64) -> Result<usize> {
+        (&self).read_at(buf, offset)
+    }
+}
+
+impl<'a> ReadFileLike for &'a [u8] {
+    fn read_at(&self, buf: &mut [u8], offset: u64) -> Result<usize> {
         if offset > usize::max_value() as u64 { return Ok(0); }
         let offset = offset as usize;
         let len = min(buf.len(), self.len() - offset);

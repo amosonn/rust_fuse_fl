@@ -48,6 +48,8 @@ pub trait WriteFileLike {
     }
 }
 
+//FIXME: both of the below impl-s don't guarantee filling the buffer!
+
 impl ReadFileLike for File {
     fn read_at(&self, buf: &mut [u8], offset: u64) -> Result<usize> {
         FileExt::read_at(self, buf, offset).map_err(|x| x.raw_os_error().unwrap())

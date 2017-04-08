@@ -58,5 +58,4 @@ use std::result;
 pub type Result<T> = result::Result<T, libc::c_int>;
 
 #[test]
-fn it_works() {
-}
+fn it_works() {}

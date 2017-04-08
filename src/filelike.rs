@@ -76,19 +76,23 @@ impl ReadFileLike for [u8] {
 
 impl<'a> ReadFileLike for &'a [u8] {
     fn read_at(&self, buf: &mut [u8], offset: u64) -> Result<usize> {
-        if offset > usize::max_value() as u64 { return Ok(0); }
+        if offset > usize::max_value() as u64 {
+            return Ok(0);
+        }
         let offset = offset as usize;
         let len = min(buf.len(), self.len() - offset);
-        buf[..len].copy_from_slice(&self[offset..offset+len]);
+        buf[..len].copy_from_slice(&self[offset..offset + len]);
         Ok(len)
     }
 }
 
 fn do_write_at(this: &mut [u8], buf: &[u8], offset: u64) -> usize {
-    if offset > usize::max_value() as u64 { return 0; }
+    if offset > usize::max_value() as u64 {
+        return 0;
+    }
     let offset = offset as usize;
     let len = min(buf.len(), this.len() - offset);
-    this[offset..offset+len].copy_from_slice(&buf[..len]);
+    this[offset..offset + len].copy_from_slice(&buf[..len]);
     len
 }
 
@@ -173,8 +177,9 @@ pub enum ModalFileLike<R, W, RW> {
 use self::ModalFileLike::*;
 
 
-impl<R, W, RW> ReadFileLike for ModalFileLike<R, W, RW> where 
-    R: ReadFileLike, RW: ReadFileLike {
+impl<R, W, RW> ReadFileLike for ModalFileLike<R, W, RW>
+    where R: ReadFileLike,
+          RW: ReadFileLike {
     fn read_at(&self, buf: &mut [u8], offset: u64) -> Result<usize> {
         match *self {
             ReadOnly(ref r) => r.read_at(buf, offset),
@@ -184,8 +189,9 @@ impl<R, W, RW> ReadFileLike for ModalFileLike<R, W, RW> where
     }
 }
 
-impl<R, W, RW> WriteFileLike for ModalFileLike<R, W, RW> where 
-    W: WriteFileLike, RW: WriteFileLike {
+impl<R, W, RW> WriteFileLike for ModalFileLike<R, W, RW>
+    where W: WriteFileLike,
+          RW: WriteFileLike {
     fn write_at(&self, buf: &[u8], offset: u64) -> Result<usize> {
         match *self {
             ReadOnly(_) => Err(libc::EBADF),
@@ -216,35 +222,65 @@ pub trait FilesystemFLRwOpen {
     /// Type for write-only file handlers.
     type WriteLike: WriteFileLike; // = NoFile;
     /// Type for read-write file handlers.
-    type ReadWriteLike: ReadFileLike+WriteFileLike; // = ReadWriteAdaptor<Self::ReadLike, Self::WriteLike>;
+    type ReadWriteLike: ReadFileLike + WriteFileLike; // = ReadWriteAdaptor<Self::ReadLike, Self::WriteLike>;
 
     /// Open a file read-only.
-    fn open_read(&self, _req: RequestInfo, _path: &Path, _flags: u32) -> ResultOpenObj<Self::ReadLike> {
+    fn open_read(&self,
+                 _req: RequestInfo,
+                 _path: &Path,
+                 _flags: u32)
+                 -> ResultOpenObj<Self::ReadLike> {
         Err(libc::ENOSYS)
     }
 
     /// Open a file write-only.
-    fn open_write(&self, _req: RequestInfo, _path: &Path, _flags: u32) -> ResultOpenObj<Self::WriteLike> {
+    fn open_write(&self,
+                  _req: RequestInfo,
+                  _path: &Path,
+                  _flags: u32)
+                  -> ResultOpenObj<Self::WriteLike> {
         Err(libc::ENOSYS)
     }
 
     /// Open a file read-write.
-    fn open_readwrite(&self, _req: RequestInfo, _path: &Path, _flags: u32) -> ResultOpenObj<Self::ReadWriteLike> {
+    fn open_readwrite(&self,
+                      _req: RequestInfo,
+                      _path: &Path,
+                      _flags: u32)
+                      -> ResultOpenObj<Self::ReadWriteLike> {
         Err(libc::ENOSYS)
     }
 
     /// Create a file, open for read-only.
-    fn create_read(&self, _req: RequestInfo, _parent: &Path, _name: &OsStr, _mode: u32, _flags: u32) -> ResultCreateObj<Self::ReadLike> {
+    fn create_read(&self,
+                   _req: RequestInfo,
+                   _parent: &Path,
+                   _name: &OsStr,
+                   _mode: u32,
+                   _flags: u32)
+                   -> ResultCreateObj<Self::ReadLike> {
         Err(libc::ENOSYS)
     }
 
     /// Create a file, open for write-only.
-    fn create_write(&self, _req: RequestInfo, _parent: &Path, _name: &OsStr, _mode: u32, _flags: u32) -> ResultCreateObj<Self::WriteLike> {
+    fn create_write(&self,
+                    _req: RequestInfo,
+                    _parent: &Path,
+                    _name: &OsStr,
+                    _mode: u32,
+                    _flags: u32)
+                    -> ResultCreateObj<Self::WriteLike> {
         Err(libc::ENOSYS)
     }
 
     /// Create a file, open for read-write.
-    fn create_readwrite(&self, _req: RequestInfo, _parent: &Path, _name: &OsStr, _mode: u32, _flags: u32) -> ResultCreateObj<Self::ReadWriteLike> {
+    fn create_readwrite(&self,
+                        _req: RequestInfo,
+                        _parent: &Path,
+                        _name: &OsStr,
+                        _mode: u32,
+                        _flags: u32)
+                        -> ResultCreateObj<Self::ReadWriteLike> {
         Err(libc::ENOSYS)
     }
 
@@ -253,11 +289,11 @@ pub trait FilesystemFLRwOpen {
     /// `Self::WriteLike` and `Self::ReadWriteLike`.
     /// Note that the file handler may be of any of the types (enum-ed by `ModalFileLike`), since
     /// we assume metadata flushing does not vary greatly depending on the file opening mode.
-    fn fsync_metadata(&self, _req: RequestInfo, _path: &Path, _fl: &ModalFileLike<
-        Self::ReadLike,
-        Self::WriteLike,
-        Self::ReadWriteLike,
-    >) -> ResultEmpty {
+    fn fsync_metadata(&self,
+                      _req: RequestInfo,
+                      _path: &Path,
+                      _fl: &ModalFileLike<Self::ReadLike, Self::WriteLike, Self::ReadWriteLike>)
+                      -> ResultEmpty {
         Err(libc::ENOSYS)
     }
 }
@@ -270,7 +306,7 @@ pub trait FilesystemFLRwOpen {
 // Part of this will become a default impl of FilesystemFL when RFC #1210 lands.
 pub trait FilesystemFLOpen {
     /// The type of a file handler used by this FS.
-    type FileLike: ReadFileLike+WriteFileLike;
+    type FileLike: ReadFileLike + WriteFileLike;
 
     /// Open a file - matches `FilesystemFL::open` for overriding, see there.
     /// This should be implemented.
@@ -281,13 +317,25 @@ pub trait FilesystemFLOpen {
     /// Create a file - matches `FilesystemFL::create` for overriding, see there.
     /// If this method is not implemented or under Linux kernel versions earlier than 2.6.15, the
     /// mknod() and open() methods will be called instead.
-    fn create(&self, _req: RequestInfo, _parent: &Path, _name: &OsStr, _mode: u32, _flags: u32) -> ResultCreateObj<Self::FileLike> {
+    fn create(&self,
+              _req: RequestInfo,
+              _parent: &Path,
+              _name: &OsStr,
+              _mode: u32,
+              _flags: u32)
+              -> ResultCreateObj<Self::FileLike> {
         Err(libc::ENOSYS)
     }
 
     /// Read from a file - matches `FilesystemFL::read` for overriding, see there.
     /// This provides the functionality of this trait.
-    fn read(&self, _req: RequestInfo, _path: &Path, _fl: &Self::FileLike, _offset: u64, _size: u32) -> ResultData {
+    fn read(&self,
+            _req: RequestInfo,
+            _path: &Path,
+            _fl: &Self::FileLike,
+            _offset: u64,
+            _size: u32)
+            -> ResultData {
         let _size = _size as usize;
         let mut vec = Vec::<u8>::with_capacity(_size);
         unsafe { vec.set_len(_size) };
@@ -299,14 +347,26 @@ pub trait FilesystemFLOpen {
 
     /// Write from a file - matches `FilesystemFL::write` for overriding, see there.
     /// This provides the functionality of this trait.
-    fn write(&self, _req: RequestInfo, _path: &Path, _fl: &Self::FileLike, _offset: u64, _data: Vec<u8>, _flags: u32) -> ResultWrite {
+    fn write(&self,
+             _req: RequestInfo,
+             _path: &Path,
+             _fl: &Self::FileLike,
+             _offset: u64,
+             _data: Vec<u8>,
+             _flags: u32)
+             -> ResultWrite {
         assert!(_data.len() <= u32::max_value() as usize);
         _fl.write_at(_data.as_slice(), _offset).map(|x| x as u32)
     }
 
     /// Fsync a file - matches `FilesystemFL::fsync` for overriding, see there.
     /// This provides the functionality of this trait.
-    fn fsync(&self, _req: RequestInfo, _path: &Path, _fl: &Self::FileLike, _datasync: bool) -> ResultEmpty {
+    fn fsync(&self,
+             _req: RequestInfo,
+             _path: &Path,
+             _fl: &Self::FileLike,
+             _datasync: bool)
+             -> ResultEmpty {
         _fl.flush()?;
         if !_datasync {
             self.fsync_metadata(_req, _path, _fl)
@@ -326,11 +386,9 @@ pub trait FilesystemFLOpen {
 
 // Part of this will become a default impl of FilesystemFL when RFC #1210 lands.
 impl<T> FilesystemFLOpen for T where T: FilesystemFLRwOpen {
-    type FileLike = ModalFileLike<
-        <Self as FilesystemFLRwOpen>::ReadLike,
+    type FileLike = ModalFileLike<<Self as FilesystemFLRwOpen>::ReadLike,
         <Self as FilesystemFLRwOpen>::WriteLike,
-        <Self as FilesystemFLRwOpen>::ReadWriteLike,
-    >;
+                  <Self as FilesystemFLRwOpen>::ReadWriteLike>;
 
     fn open(&self, _req: RequestInfo, _path: &Path, _flags: u32) -> ResultOpenObj<Self::FileLike> {
         match _flags as i32 & libc::O_ACCMODE {
@@ -343,11 +401,26 @@ impl<T> FilesystemFLOpen for T where T: FilesystemFLRwOpen {
 
     /// If this method is not implemented or under Linux kernel versions earlier than 2.6.15, the
     /// mknod() and open() methods will be called instead.
-    fn create(&self, _req: RequestInfo, _parent: &Path, _name: &OsStr, _mode: u32, _flags: u32) -> ResultCreateObj<Self::FileLike> {
+    fn create(&self,
+              _req: RequestInfo,
+              _parent: &Path,
+              _name: &OsStr,
+              _mode: u32,
+              _flags: u32)
+              -> ResultCreateObj<Self::FileLike> {
         match _flags as i32 & libc::O_ACCMODE {
-            libc::O_RDONLY => map_res_create(self.create_read(_req, _parent, _name, _mode, _flags), |fl| ReadOnly(fl)),
-            libc::O_WRONLY => map_res_create(self.create_write(_req, _parent, _name, _mode, _flags), |fl| WriteOnly(fl)),
-            libc::O_RDWR => map_res_create(self.create_readwrite(_req, _parent, _name, _mode, _flags), |fl| ReadWrite(fl)),
+            libc::O_RDONLY => {
+                map_res_create(self.create_read(_req, _parent, _name, _mode, _flags),
+                               |fl| ReadOnly(fl))
+            }
+            libc::O_WRONLY => {
+                map_res_create(self.create_write(_req, _parent, _name, _mode, _flags),
+                               |fl| WriteOnly(fl))
+            }
+            libc::O_RDWR => {
+                map_res_create(self.create_readwrite(_req, _parent, _name, _mode, _flags),
+                               |fl| ReadWrite(fl))
+            }
             _ => Err(libc::EINVAL),
         }
     }
@@ -356,4 +429,3 @@ impl<T> FilesystemFLOpen for T where T: FilesystemFLRwOpen {
         FilesystemFLRwOpen::fsync_metadata(self, _req, _path, _fl)
     }
 }
-

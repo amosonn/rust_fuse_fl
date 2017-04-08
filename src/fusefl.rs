@@ -36,20 +36,47 @@ pub type ResultOpenObj<T> = Result<(T, u32)>;
 /// Result of an `create` call on FilesystemFL.
 pub type ResultCreateObj<T> = Result<CreatedEntryObj<T>>;
 
-pub fn map_res_open<T, S, F>(this: ResultOpenObj<T>, f: F) -> ResultOpenObj<S> where F: FnOnce(T) -> S {
+pub fn map_res_open<T, S, F>(this: ResultOpenObj<T>, f: F) -> ResultOpenObj<S>
+    where F: FnOnce(T) -> S {
     this.map(|x| (f(x.0), x.1))
 }
 
-pub fn map_res_create<T, S, F>(this: ResultCreateObj<T>, f: F) -> ResultCreateObj<S> where F: FnOnce(T) -> S {
+pub fn map_res_create<T, S, F>(this: ResultCreateObj<T>, f: F) -> ResultCreateObj<S>
+    where F: FnOnce(T) -> S {
     match this {
-        Ok(CreatedEntryObj { ttl, attr, fl, flags }) => Ok(CreatedEntryObj { ttl, attr, fl: f(fl), flags }),
+        Ok(CreatedEntryObj {
+               ttl,
+               attr,
+               fl,
+               flags,
+           }) => {
+            Ok(CreatedEntryObj {
+                   ttl,
+                   attr,
+                   fl: f(fl),
+                   flags,
+               })
+        }
         Err(e) => Err(e),
     }
 }
 
-pub fn map_res_create2<T, F>(this: ResultCreateObj<T>, f: F) -> ResultCreate where F: FnOnce(T) -> u64 {
+pub fn map_res_create2<T, F>(this: ResultCreateObj<T>, f: F) -> ResultCreate
+    where F: FnOnce(T) -> u64 {
     match this {
-        Ok(CreatedEntryObj { ttl, attr, fl, flags }) => Ok(CreatedEntry { ttl, attr, fh: f(fl), flags }),
+        Ok(CreatedEntryObj {
+               ttl,
+               attr,
+               fl,
+               flags,
+           }) => {
+            Ok(CreatedEntry {
+                   ttl,
+                   attr,
+                   fh: f(fl),
+                   flags,
+               })
+        }
         Err(e) => Err(e),
     }
 }
@@ -57,7 +84,6 @@ pub fn map_res_create2<T, F>(this: ResultCreateObj<T>, f: F) -> ResultCreate whe
 
 /// This trait must be implemented to implement a filesystem with FuseFL.
 pub trait FilesystemFL {
-
     /// The type for objects returned by open/create and used by read, etc.
     type FileLike;
     /// The type for objects returned by opendir and used by readdir, etc.
@@ -84,7 +110,11 @@ pub trait FilesystemFL {
     /// Get the attributes of a filesystem entry.
     ///
     /// * `fl`: a FileLike object if this is called on an open file.
-    fn getattr(&self, _req: RequestInfo, _path: &Path, _fl: Option<&Self::FileLike>) -> ResultGetattr {
+    fn getattr(&self,
+               _req: RequestInfo,
+               _path: &Path,
+               _fl: Option<&Self::FileLike>)
+               -> ResultGetattr {
         Err(libc::ENOSYS)
     }
 
@@ -95,7 +125,12 @@ pub trait FilesystemFL {
     ///
     /// * `fl`: a FileLike object if this is called on an open file.
     /// * `mode`: the mode to change the file to.
-    fn chmod(&self, _req: RequestInfo, _path: &Path, _fl: Option<&Self::FileLike>, _mode: u32) -> ResultEmpty {
+    fn chmod(&self,
+             _req: RequestInfo,
+             _path: &Path,
+             _fl: Option<&Self::FileLike>,
+             _mode: u32)
+             -> ResultEmpty {
         Err(libc::ENOSYS)
     }
 
@@ -104,7 +139,13 @@ pub trait FilesystemFL {
     /// * `fl`: a FileLike object if this is called on an open file.
     /// * `uid`: user ID to change the file's owner to. If `None`, leave the UID unchanged.
     /// * `gid`: group ID to change the file's group to. If `None`, leave the GID unchanged.
-    fn chown(&self, _req: RequestInfo, _path: &Path, _fl: Option<&Self::FileLike>, _uid: Option<u32>, _gid: Option<u32>) -> ResultEmpty {
+    fn chown(&self,
+             _req: RequestInfo,
+             _path: &Path,
+             _fl: Option<&Self::FileLike>,
+             _uid: Option<u32>,
+             _gid: Option<u32>)
+             -> ResultEmpty {
         Err(libc::ENOSYS)
     }
 
@@ -112,7 +153,12 @@ pub trait FilesystemFL {
     ///
     /// * `fl`: a FileLike object if this is called on an open file.
     /// * `size`: size in bytes to set as the file's length.
-    fn truncate(&self, _req: RequestInfo, _path: &Path, _fl: Option<&Self::FileLike>, _size: u64) -> ResultEmpty {
+    fn truncate(&self,
+                _req: RequestInfo,
+                _path: &Path,
+                _fl: Option<&Self::FileLike>,
+                _size: u64)
+                -> ResultEmpty {
         Err(libc::ENOSYS)
     }
 
@@ -121,13 +167,27 @@ pub trait FilesystemFL {
     /// * `fl`: a FileLike object if this is called on an open file.
     /// * `atime`: the time of last access.
     /// * `mtime`: the time of last modification.
-    fn utimens(&self, _req: RequestInfo, _path: &Path, _fl: Option<&Self::FileLike>, _atime: Option<Timespec>, _mtime: Option<Timespec>) -> ResultEmpty {
+    fn utimens(&self,
+               _req: RequestInfo,
+               _path: &Path,
+               _fl: Option<&Self::FileLike>,
+               _atime: Option<Timespec>,
+               _mtime: Option<Timespec>)
+               -> ResultEmpty {
         Err(libc::ENOSYS)
     }
 
     /// Set timestamps of a filesystem entry (with extra options only used on MacOS).
     #[allow(unknown_lints, too_many_arguments)]
-    fn utimens_macos(&self, _req: RequestInfo, _path: &Path, _fl: Option<&Self::FileLike>, _crtime: Option<Timespec>, _chgtime: Option<Timespec>, _bkuptime: Option<Timespec>, _flags: Option<u32>) -> ResultEmpty {
+    fn utimens_macos(&self,
+                     _req: RequestInfo,
+                     _path: &Path,
+                     _fl: Option<&Self::FileLike>,
+                     _crtime: Option<Timespec>,
+                     _chgtime: Option<Timespec>,
+                     _bkuptime: Option<Timespec>,
+                     _flags: Option<u32>)
+                     -> ResultEmpty {
         Err(libc::ENOSYS)
     }
 
@@ -144,7 +204,13 @@ pub trait FilesystemFL {
     /// * `name`: name of the entry.
     /// * `mode`: mode for the new entry.
     /// * `rdev`: if mode has the bits `S_IFCHR` or `S_IFBLK` set, this is the major and minor numbers for the device file. Otherwise it should be ignored.
-    fn mknod(&self, _req: RequestInfo, _parent: &Path, _name: &OsStr, _mode: u32, _rdev: u32) -> ResultEntry {
+    fn mknod(&self,
+             _req: RequestInfo,
+             _parent: &Path,
+             _name: &OsStr,
+             _mode: u32,
+             _rdev: u32)
+             -> ResultEntry {
         Err(libc::ENOSYS)
     }
 
@@ -178,7 +244,12 @@ pub trait FilesystemFL {
     /// * `parent`: path to the directory to make the link in.
     /// * `name`: name of the symbolic link.
     /// * `target`: path (may be relative or absolute) to the target of the link.
-    fn symlink(&self, _req: RequestInfo, _parent: &Path, _name: &OsStr, _target: &Path) -> ResultEntry {
+    fn symlink(&self,
+               _req: RequestInfo,
+               _parent: &Path,
+               _name: &OsStr,
+               _target: &Path)
+               -> ResultEntry {
         Err(libc::ENOSYS)
     }
 
@@ -188,7 +259,13 @@ pub trait FilesystemFL {
     /// * `name`: name of the existing entry.
     /// * `newparent`: path to the directory it should be renamed into (may be the same as `parent`).
     /// * `newname`: name of the new entry.
-    fn rename(&self, _req: RequestInfo, _parent: &Path, _name: &OsStr, _newparent: &Path, _newname: &OsStr) -> ResultEmpty {
+    fn rename(&self,
+              _req: RequestInfo,
+              _parent: &Path,
+              _name: &OsStr,
+              _newparent: &Path,
+              _newname: &OsStr)
+              -> ResultEmpty {
         Err(libc::ENOSYS)
     }
 
@@ -197,7 +274,12 @@ pub trait FilesystemFL {
     /// * `path`: path to an existing file.
     /// * `newparent`: path to the directory for the new link.
     /// * `newname`: name for the new link.
-    fn link(&self, _req: RequestInfo, _path: &Path, _newparent: &Path, _newname: &OsStr) -> ResultEntry {
+    fn link(&self,
+            _req: RequestInfo,
+            _path: &Path,
+            _newparent: &Path,
+            _newname: &OsStr)
+            -> ResultEntry {
         Err(libc::ENOSYS)
     }
 
@@ -225,7 +307,13 @@ pub trait FilesystemFL {
     /// * `size`: number of bytes to read.
     ///
     /// Return the bytes read.
-    fn read(&self, _req: RequestInfo, _path: &Path, _fl: &Self::FileLike, _offset: u64, _size: u32) -> ResultData {
+    fn read(&self,
+            _req: RequestInfo,
+            _path: &Path,
+            _fl: &Self::FileLike,
+            _offset: u64,
+            _size: u32)
+            -> ResultData {
         Err(libc::ENOSYS)
     }
 
@@ -238,7 +326,14 @@ pub trait FilesystemFL {
     /// * `flags`:
     ///
     /// Return the number of bytes written.
-    fn write(&self, _req: RequestInfo, _path: &Path, _fl: &Self::FileLike, _offset: u64, _data: Vec<u8>, _flags: u32) -> ResultWrite {
+    fn write(&self,
+             _req: RequestInfo,
+             _path: &Path,
+             _fl: &Self::FileLike,
+             _offset: u64,
+             _data: Vec<u8>,
+             _flags: u32)
+             -> ResultWrite {
         Err(libc::ENOSYS)
     }
 
@@ -258,7 +353,12 @@ pub trait FilesystemFL {
     /// * `fl`: FileLike object returned from the `open` call.
     /// * `lock_owner`: if the filesystem supports locking (`setlk`, `getlk`), remove all locks
     ///   belonging to this lock owner.
-    fn flush(&self, _req: RequestInfo, _path: &Path, _fl: &Self::FileLike, _lock_owner: u64) -> ResultEmpty {
+    fn flush(&self,
+             _req: RequestInfo,
+             _path: &Path,
+             _fl: &Self::FileLike,
+             _lock_owner: u64)
+             -> ResultEmpty {
         Err(libc::ENOSYS)
     }
 
@@ -269,7 +369,12 @@ pub trait FilesystemFL {
     /// * `path`: path to the file.
     /// * `fl`: FileLike object returned from the `open` call.
     /// * `datasync`: if `false`, just write metadata, otherwise also write file data.
-    fn fsync(&self, _req: RequestInfo, _path: &Path, _fl: &Self::FileLike, _datasync: bool) -> ResultEmpty {
+    fn fsync(&self,
+             _req: RequestInfo,
+             _path: &Path,
+             _fl: &Self::FileLike,
+             _datasync: bool)
+             -> ResultEmpty {
         Err(libc::ENOSYS)
     }
 
@@ -283,7 +388,11 @@ pub trait FilesystemFL {
     /// Return a tuple of (file handle, flags). The file handle will be passed to any subsequent
     /// calls that operate on the directory, and can be any value you choose, though it should
     /// allow your filesystem to identify the directory opened even without any path info.
-    fn opendir(&self, _req: RequestInfo, _path: &Path, _flags: u32) -> ResultOpenObj<Self::DirLike> {
+    fn opendir(&self,
+               _req: RequestInfo,
+               _path: &Path,
+               _flags: u32)
+               -> ResultOpenObj<Self::DirLike> {
         Err(libc::ENOSYS)
     }
 
@@ -300,7 +409,12 @@ pub trait FilesystemFL {
     /// Write out any pending changes to a directory.
     ///
     /// Analogous to the `fsync` call.
-    fn fsyncdir(&self, _req: RequestInfo, _path: &Path, _dl: &Self::DirLike, _datasync: bool) -> ResultEmpty {
+    fn fsyncdir(&self,
+                _req: RequestInfo,
+                _path: &Path,
+                _dl: &Self::DirLike,
+                _datasync: bool)
+                -> ResultEmpty {
         Err(libc::ENOSYS)
     }
 
@@ -320,7 +434,14 @@ pub trait FilesystemFL {
     /// * `value`: the data to set the value to.
     /// * `flags`: can be either `XATTR_CREATE` or `XATTR_REPLACE`.
     /// * `position`: offset into the attribute value to write data.
-    fn setxattr(&self, _req: RequestInfo, _path: &Path, _name: &OsStr, _value: &[u8], _flags: u32, _position: u32) -> ResultEmpty {
+    fn setxattr(&self,
+                _req: RequestInfo,
+                _path: &Path,
+                _name: &OsStr,
+                _value: &[u8],
+                _flags: u32,
+                _position: u32)
+                -> ResultEmpty {
         Err(libc::ENOSYS)
     }
 
@@ -377,7 +498,13 @@ pub trait FilesystemFL {
     ///
     /// Return a `CreatedEntry` (which contains the new file's attributes as well as a file handle
     /// -- see documentation on `open` for more info on that).
-    fn create(&self, _req: RequestInfo, _parent: &Path, _name: &OsStr, _mode: u32, _flags: u32) -> ResultCreateObj<Self::FileLike> {
+    fn create(&self,
+              _req: RequestInfo,
+              _parent: &Path,
+              _name: &OsStr,
+              _mode: u32,
+              _flags: u32)
+              -> ResultCreateObj<Self::FileLike> {
         Err(libc::ENOSYS)
     }
 
@@ -411,7 +538,6 @@ impl<T> FuseFL<T> where T: FilesystemFL {
 
 
 impl<T: FilesystemFL + Sync + Send + 'static> FilesystemMT for FuseFL<T> {
-
     fn init(&self, _req: RequestInfo) -> ResultEmpty {
         self.inner.init(_req)
     }
@@ -443,7 +569,13 @@ impl<T: FilesystemFL + Sync + Send + 'static> FilesystemMT for FuseFL<T> {
         }
     }
 
-    fn chown(&self, _req: RequestInfo, _path: &Path, _fh: Option<u64>, _uid: Option<u32>, _gid: Option<u32>) -> ResultEmpty {
+    fn chown(&self,
+             _req: RequestInfo,
+             _path: &Path,
+             _fh: Option<u64>,
+             _uid: Option<u32>,
+             _gid: Option<u32>)
+             -> ResultEmpty {
         if let Some(_fh) = _fh {
             self.inner.chown(_req, _path, Some(self.files.get(_fh).unwrap()), _uid, _gid)
         } else {
@@ -451,7 +583,12 @@ impl<T: FilesystemFL + Sync + Send + 'static> FilesystemMT for FuseFL<T> {
         }
     }
 
-    fn truncate(&self, _req: RequestInfo, _path: &Path, _fh: Option<u64>, _size: u64) -> ResultEmpty {
+    fn truncate(&self,
+                _req: RequestInfo,
+                _path: &Path,
+                _fh: Option<u64>,
+                _size: u64)
+                -> ResultEmpty {
         if let Some(_fh) = _fh {
             self.inner.truncate(_req, _path, Some(self.files.get(_fh).unwrap()), _size)
         } else {
@@ -459,7 +596,13 @@ impl<T: FilesystemFL + Sync + Send + 'static> FilesystemMT for FuseFL<T> {
         }
     }
 
-    fn utimens(&self, _req: RequestInfo, _path: &Path, _fh: Option<u64>, _atime: Option<Timespec>, _mtime: Option<Timespec>) -> ResultEmpty {
+    fn utimens(&self,
+               _req: RequestInfo,
+               _path: &Path,
+               _fh: Option<u64>,
+               _atime: Option<Timespec>,
+               _mtime: Option<Timespec>)
+               -> ResultEmpty {
         if let Some(_fh) = _fh {
             self.inner.utimens(_req, _path, Some(self.files.get(_fh).unwrap()), _atime, _mtime)
         } else {
@@ -468,7 +611,15 @@ impl<T: FilesystemFL + Sync + Send + 'static> FilesystemMT for FuseFL<T> {
     }
 
     #[allow(unknown_lints, too_many_arguments)]
-    fn utimens_macos(&self, _req: RequestInfo, _path: &Path, _fh: Option<u64>, _crtime: Option<Timespec>, _chgtime: Option<Timespec>, _bkuptime: Option<Timespec>, _flags: Option<u32>) -> ResultEmpty {
+    fn utimens_macos(&self,
+                     _req: RequestInfo,
+                     _path: &Path,
+                     _fh: Option<u64>,
+                     _crtime: Option<Timespec>,
+                     _chgtime: Option<Timespec>,
+                     _bkuptime: Option<Timespec>,
+                     _flags: Option<u32>)
+                     -> ResultEmpty {
         if let Some(_fh) = _fh {
             self.inner.utimens_macos(_req, _path, Some(self.files.get(_fh).unwrap()), _crtime, _chgtime, _bkuptime, _flags)
         } else {
@@ -482,7 +633,13 @@ impl<T: FilesystemFL + Sync + Send + 'static> FilesystemMT for FuseFL<T> {
         self.inner.readlink(_req, _path)
     }
 
-    fn mknod(&self, _req: RequestInfo, _parent: &Path, _name: &OsStr, _mode: u32, _rdev: u32) -> ResultEntry {
+    fn mknod(&self,
+             _req: RequestInfo,
+             _parent: &Path,
+             _name: &OsStr,
+             _mode: u32,
+             _rdev: u32)
+             -> ResultEntry {
         self.inner.mknod(_req, _parent, _name, _mode, _rdev)
     }
 
@@ -498,11 +655,22 @@ impl<T: FilesystemFL + Sync + Send + 'static> FilesystemMT for FuseFL<T> {
         self.inner.rmdir(_req, _parent, _name)
     }
 
-    fn symlink(&self, _req: RequestInfo, _parent: &Path, _name: &OsStr, _target: &Path) -> ResultEntry {
+    fn symlink(&self,
+               _req: RequestInfo,
+               _parent: &Path,
+               _name: &OsStr,
+               _target: &Path)
+               -> ResultEntry {
         self.inner.symlink(_req, _parent, _name, _target)
     }
 
-    fn rename(&self, _req: RequestInfo, _parent: &Path, _name: &OsStr, _newparent: &Path, _newname: &OsStr) -> ResultEmpty {
+    fn rename(&self,
+              _req: RequestInfo,
+              _parent: &Path,
+              _name: &OsStr,
+              _newparent: &Path,
+              _newname: &OsStr)
+              -> ResultEmpty {
         self.inner.rename(_req, _parent, _name, _newparent, _newname)
     }
 
@@ -514,11 +682,24 @@ impl<T: FilesystemFL + Sync + Send + 'static> FilesystemMT for FuseFL<T> {
         map_res_open(self.inner.open(_req, _path, _flags), |fl| self.files.insert(fl))
     }
 
-    fn read(&self, _req: RequestInfo, _path: &Path, _fh: u64, _offset: u64, _size: u32) -> ResultData {
+    fn read(&self,
+            _req: RequestInfo,
+            _path: &Path,
+            _fh: u64,
+            _offset: u64,
+            _size: u32)
+            -> ResultData {
         self.inner.read(_req, _path, self.files.get(_fh).unwrap(), _offset, _size)
     }
 
-    fn write(&self, _req: RequestInfo, _path: &Path, _fh: u64, _offset: u64, _data: Vec<u8>, _flags: u32) -> ResultWrite {
+    fn write(&self,
+             _req: RequestInfo,
+             _path: &Path,
+             _fh: u64,
+             _offset: u64,
+             _data: Vec<u8>,
+             _flags: u32)
+             -> ResultWrite {
         self.inner.write(_req, _path, self.files.get(_fh).unwrap(), _offset, _data, _flags)
     }
 
@@ -526,7 +707,14 @@ impl<T: FilesystemFL + Sync + Send + 'static> FilesystemMT for FuseFL<T> {
         self.inner.flush(_req, _path, self.files.get(_fh).unwrap(), _lock_owner)
     }
 
-    fn release(&self, _req: RequestInfo, _path: &Path, _fh: u64, _flags: u32, _lock_owner: u64, _flush: bool) -> ResultEmpty {
+    fn release(&self,
+               _req: RequestInfo,
+               _path: &Path,
+               _fh: u64,
+               _flags: u32,
+               _lock_owner: u64,
+               _flush: bool)
+               -> ResultEmpty {
         let fl = self.files.remove(_fh).unwrap();
         if _flush {
             self.inner.flush(_req, _path, &fl, _lock_owner)
@@ -561,7 +749,14 @@ impl<T: FilesystemFL + Sync + Send + 'static> FilesystemMT for FuseFL<T> {
         self.inner.statfs(_req, _path)
     }
 
-    fn setxattr(&self, _req: RequestInfo, _path: &Path, _name: &OsStr, _value: &[u8], _flags: u32, _position: u32) -> ResultEmpty {
+    fn setxattr(&self,
+                _req: RequestInfo,
+                _path: &Path,
+                _name: &OsStr,
+                _value: &[u8],
+                _flags: u32,
+                _position: u32)
+                -> ResultEmpty {
         self.inner.setxattr(_req, _path, _name, _value, _flags, _position)
     }
 
@@ -581,7 +776,13 @@ impl<T: FilesystemFL + Sync + Send + 'static> FilesystemMT for FuseFL<T> {
         self.inner.access(_req, _path, _mask)
     }
 
-    fn create(&self, _req: RequestInfo, _parent: &Path, _name: &OsStr, _mode: u32, _flags: u32) -> ResultCreate {
+    fn create(&self,
+              _req: RequestInfo,
+              _parent: &Path,
+              _name: &OsStr,
+              _mode: u32,
+              _flags: u32)
+              -> ResultCreate {
         map_res_create2(self.inner.create(_req, _parent, _name, _mode, _flags), |fl| self.files.insert(fl))
     }
 
@@ -591,4 +792,3 @@ impl<T: FilesystemFL + Sync + Send + 'static> FilesystemMT for FuseFL<T> {
 
     // bmap
 }
-

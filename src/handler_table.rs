@@ -45,10 +45,12 @@ impl<'a, T> HandlerTableGetGuard<'a, T> {
 impl<T> HandlerTable<T> {
     /// Create a new, empty HandlerTable.
     pub fn new() -> HandlerTable<T> {
-        HandlerTable { inner: RwLock::new(InnerTable { 
-            next_fh: 0, 
-            map: HashMap::new(),
-        } ) }
+        HandlerTable {
+            inner: RwLock::new(InnerTable {
+                next_fh: 0, 
+                map: HashMap::new(),
+            }),
+        }
     }
 
     /// Get the object associated with a file handler, if it exists.
@@ -64,7 +66,10 @@ impl<T> HandlerTable<T> {
     /// Insert a new object, returning the file handler generated for it.
     pub fn insert(&self, obj: T) -> u64 {
         let mut inner = self.inner.write().unwrap();
-        let InnerTable { next_fh: ref mut fh, ref mut map } = *inner;
+        let InnerTable {
+            next_fh: ref mut fh,
+            ref mut map,
+        } = *inner;
         assert!(map.insert(*fh, obj).is_none());
         *fh += 1;
         *fh - 1

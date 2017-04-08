@@ -14,16 +14,19 @@ use std::mem;
 
 /// Table for storing objects for handlers, and issuing handlers for new objects, all available via
 /// inner mutability.
+#[derive(Debug)]
 pub struct HandlerTable<T> {
     inner: RwLock<InnerTable<T>>,
 }
 
+#[derive(Debug)]
 struct InnerTable<T> {
     next_fh: u64,
     map: HashMap<u64, T>,
 }
 
 #[allow(dead_code)]
+#[derive(Debug)]
 pub struct HandlerTableGetGuard<'a, T: 'a> {
     map_guard: RwLockReadGuard<'a, InnerTable<T>>,
     val: Option<*const T>,

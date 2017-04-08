@@ -5,7 +5,13 @@
 // <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
-//
+//! Wrapper around fuse-mt providing extra functionality for ease of implementation: `open` and
+//! `opendir` methods now return a `FileLike` and `DirLike` object (respectively), which is then passed
+//! to `read`, etc. calls (instead of a `fh: u64`).
+#![deny(missing_docs,
+        missing_debug_implementations, missing_copy_implementations,
+        unstable_features,
+        unused_import_braces, unused_qualifications)]
 
 extern crate fuse_mt;
 extern crate libc;
@@ -48,6 +54,7 @@ pub use fuse_mt::{
 };
 
 use std::result;
+/// All results for fuse calls have `libc::c_int` as the Err variant.
 pub type Result<T> = result::Result<T, libc::c_int>;
 
 #[test]

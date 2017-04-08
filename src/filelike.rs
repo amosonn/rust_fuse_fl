@@ -112,6 +112,7 @@ impl WriteFileLike for RwLock<[u8]> {
 
 /// Empty type for using with FilesystemFLRwOpen as the WriteLike and ReadWriteLike for readonly
 /// fs-s (or the similar parallel for writeonly ones).
+#[derive(Debug, Clone, Copy)]
 pub enum NoFile {}
 
 #[allow(unused_variables)]
@@ -134,6 +135,7 @@ impl WriteFileLike for NoFile {
 
 /// Naive implementation of a read-write FileLike, given a read FileLike and
 /// a write FileLike implementation.
+#[derive(Debug)]
 pub struct ReadWriteAdaptor<R, W> {
     reader: R,
     writer: W,
@@ -156,11 +158,15 @@ impl<R, W> WriteFileLike for ReadWriteAdaptor<R, W> where W: WriteFileLike {
 }
 
 /// Implementation of a FileLike which can be either read-only, write-only or read-write.
-/// Implementes both the ReadLike and WriteLike, returning EBADF in case of trying to write to a
+/// Implementes both `ReadLike` and `WriteLike`, returning EBADF in case of trying to write to a
 /// read-only file or vice-versa (just like you'd expect).
+#[derive(Debug)]
 pub enum ModalFileLike<R, W, RW> {
+    /// Read-only file - will EBADF on `write` or `flush`.
     ReadOnly(R),
+    /// Write-only file - will EBADF on `read`.
     WriteOnly(W),
+    /// Read-write file - both ops are supported.
     ReadWrite(RW),
 }
 
@@ -205,34 +211,48 @@ impl<R, W, RW> WriteFileLike for ModalFileLike<R, W, RW> where
 /// because persumably the synchronization of metadata is mostly unaffected by how the file was
 /// opened.
 pub trait FilesystemFLRwOpen {
+    /// Type for read-only file handlers.
     type ReadLike: ReadFileLike; // = NoFile;
+    /// Type for write-only file handlers.
     type WriteLike: WriteFileLike; // = NoFile;
+    /// Type for read-write file handlers.
     type ReadWriteLike: ReadFileLike+WriteFileLike; // = ReadWriteAdaptor<Self::ReadLike, Self::WriteLike>;
 
+    /// Open a file read-only.
     fn open_read(&self, _req: RequestInfo, _path: &Path, _flags: u32) -> ResultOpenObj<Self::ReadLike> {
         Err(libc::ENOSYS)
     }
 
+    /// Open a file write-only.
     fn open_write(&self, _req: RequestInfo, _path: &Path, _flags: u32) -> ResultOpenObj<Self::WriteLike> {
         Err(libc::ENOSYS)
     }
 
+    /// Open a file read-write.
     fn open_readwrite(&self, _req: RequestInfo, _path: &Path, _flags: u32) -> ResultOpenObj<Self::ReadWriteLike> {
         Err(libc::ENOSYS)
     }
 
+    /// Create a file, open for read-only.
     fn create_read(&self, _req: RequestInfo, _parent: &Path, _name: &OsStr, _mode: u32, _flags: u32) -> ResultCreateObj<Self::ReadLike> {
         Err(libc::ENOSYS)
     }
 
+    /// Create a file, open for write-only.
     fn create_write(&self, _req: RequestInfo, _parent: &Path, _name: &OsStr, _mode: u32, _flags: u32) -> ResultCreateObj<Self::WriteLike> {
         Err(libc::ENOSYS)
     }
 
+    /// Create a file, open for read-write.
     fn create_readwrite(&self, _req: RequestInfo, _parent: &Path, _name: &OsStr, _mode: u32, _flags: u32) -> ResultCreateObj<Self::ReadWriteLike> {
         Err(libc::ENOSYS)
     }
 
+    /// `fsync` (i.e. flush) only the metadata of a file (with given path and handler). For
+    /// `fsync`-ing the contents of the file, implement `WriteFileLike::flush` for
+    /// `Self::WriteLike` and `Self::ReadWriteLike`.
+    /// Note that the file handler may be of any of the types (enum-ed by `ModalFileLike`), since
+    /// we assume metadata flushing does not vary greatly depending on the file opening mode.
     fn fsync_metadata(&self, _req: RequestInfo, _path: &Path, _fl: &ModalFileLike<
         Self::ReadLike,
         Self::WriteLike,
@@ -249,18 +269,24 @@ pub trait FilesystemFLRwOpen {
 /// and these should be manually called in the implementation of FilesystemFL.
 // Part of this will become a default impl of FilesystemFL when RFC #1210 lands.
 pub trait FilesystemFLOpen {
+    /// The type of a file handler used by this FS.
     type FileLike: ReadFileLike+WriteFileLike;
 
+    /// Open a file - matches `FilesystemFL::open` for overriding, see there.
+    /// This should be implemented.
     fn open(&self, _req: RequestInfo, _path: &Path, _flags: u32) -> ResultOpenObj<Self::FileLike> {
         Err(libc::ENOSYS)
     }
 
+    /// Create a file - matches `FilesystemFL::create` for overriding, see there.
     /// If this method is not implemented or under Linux kernel versions earlier than 2.6.15, the
     /// mknod() and open() methods will be called instead.
     fn create(&self, _req: RequestInfo, _parent: &Path, _name: &OsStr, _mode: u32, _flags: u32) -> ResultCreateObj<Self::FileLike> {
         Err(libc::ENOSYS)
     }
 
+    /// Read from a file - matches `FilesystemFL::read` for overriding, see there.
+    /// This provides the functionality of this trait.
     fn read(&self, _req: RequestInfo, _path: &Path, _fl: &Self::FileLike, _offset: u64, _size: u32) -> ResultData {
         let _size = _size as usize;
         let mut vec = Vec::<u8>::with_capacity(_size);
@@ -271,11 +297,15 @@ pub trait FilesystemFLOpen {
         Ok(vec)
     }
 
+    /// Write from a file - matches `FilesystemFL::write` for overriding, see there.
+    /// This provides the functionality of this trait.
     fn write(&self, _req: RequestInfo, _path: &Path, _fl: &Self::FileLike, _offset: u64, _data: Vec<u8>, _flags: u32) -> ResultWrite {
         assert!(_data.len() <= u32::max_value() as usize);
         _fl.write_at(_data.as_slice(), _offset).map(|x| x as u32)
     }
 
+    /// Fsync a file - matches `FilesystemFL::fsync` for overriding, see there.
+    /// This provides the functionality of this trait.
     fn fsync(&self, _req: RequestInfo, _path: &Path, _fl: &Self::FileLike, _datasync: bool) -> ResultEmpty {
         _fl.flush()?;
         if !_datasync {
@@ -285,6 +315,10 @@ pub trait FilesystemFLOpen {
         }
     }
 
+    /// `fsync` (i.e. flush) only the metadata of a file (with given path and handler). For
+    /// `fsync`-ing the contents of the file, implement `WriteFileLike::flush` for
+    /// `Self::FileLike`.
+    /// This should be implemented, it is used by `fsync` (in conjuction with `FileLike::flush`).
     fn fsync_metadata(&self, _req: RequestInfo, _path: &Path, _fl: &Self::FileLike) -> ResultEmpty {
         Err(libc::ENOSYS)
     }

@@ -19,14 +19,21 @@ use super::Result;
 
 /// The return value for `create`: contains info on the newly-created file, as well as a FileLike
 /// object to handle the opened file.
+#[derive(Debug)]
 pub struct CreatedEntryObj<T> {
+    /// TTL of the created entry ? (TODO: check fuse docs)
     pub ttl: Timespec,
+    /// Attributes of the created file
     pub attr: FileAttr,
+    /// The handler object to be passed to calls on this file descriptor.
     pub fl: T,
+    /// Creation flags, see fuse docs.
     pub flags: u32,
 }
 
+/// Result of an `open` call on FilesystemFL.
 pub type ResultOpenObj<T> = Result<(T, u32)>;
+/// Result of an `create` call on FilesystemFL.
 pub type ResultCreateObj<T> = Result<CreatedEntryObj<T>>;
 
 pub fn map_res_open<T, S, F>(this: ResultOpenObj<T>, f: F) -> ResultOpenObj<S> where F: FnOnce(T) -> S {
@@ -382,6 +389,8 @@ pub trait FilesystemFL {
 }
 
 
+/// Adaptor struct for using a filesystem - holds a FilesystemFL and implements FilesystemMT.
+#[derive(Debug)]
 pub struct FuseFL<T> where T: FilesystemFL {
     inner: T,
     files: HandlerTable<T::FileLike>,
@@ -390,6 +399,7 @@ pub struct FuseFL<T> where T: FilesystemFL {
 
 
 impl<T> FuseFL<T> where T: FilesystemFL {
+    /// Build a new FuseFL from a given FilesystemFL.
     pub fn new(target_fs: T) -> FuseFL<T> {
         FuseFL {
             inner: target_fs,

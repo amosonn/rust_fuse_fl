@@ -222,7 +222,8 @@ pub trait FilesystemFLRwOpen {
     /// Type for write-only file handlers.
     type WriteLike: WriteFileLike; // = NoFile;
     /// Type for read-write file handlers.
-    type ReadWriteLike: ReadFileLike + WriteFileLike; // = ReadWriteAdaptor<Self::ReadLike, Self::WriteLike>;
+    type ReadWriteLike: ReadFileLike + WriteFileLike;
+        // = ReadWriteAdaptor<Self::ReadLike, Self::WriteLike>;
 
     /// Open a file read-only.
     fn open_read(&self,

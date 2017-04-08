@@ -203,7 +203,8 @@ pub trait FilesystemFL {
     /// * `parent`: path to the directory to make the entry under.
     /// * `name`: name of the entry.
     /// * `mode`: mode for the new entry.
-    /// * `rdev`: if mode has the bits `S_IFCHR` or `S_IFBLK` set, this is the major and minor numbers for the device file. Otherwise it should be ignored.
+    /// * `rdev`: if mode has the bits `S_IFCHR` or `S_IFBLK` set, this is the major and minor
+    ///    numbers for the device file. Otherwise it should be ignored.
     fn mknod(&self,
              _req: RequestInfo,
              _parent: &Path,
@@ -257,7 +258,8 @@ pub trait FilesystemFL {
     ///
     /// * `parent`: path to the directory containing the existing entry.
     /// * `name`: name of the existing entry.
-    /// * `newparent`: path to the directory it should be renamed into (may be the same as `parent`).
+    /// * `newparent`: path to the directory it should be renamed into (may be the same as
+    ///   `parent`).
     /// * `newname`: name of the new entry.
     fn rename(&self,
               _req: RequestInfo,

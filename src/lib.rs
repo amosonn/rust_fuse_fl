@@ -6,8 +6,8 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 //! Wrapper around fuse-mt providing extra functionality for ease of implementation: `open` and
-//! `opendir` methods now return a `FileLike` and `DirLike` object (respectively), which is then passed
-//! to `read`, etc. calls (instead of a `fh: u64`).
+//! `opendir` methods now return a `FileLike` and `DirLike` object (respectively), which is then
+//! passed to `read`, etc. calls (instead of a `fh: u64`).
 #![deny(missing_docs,
         missing_debug_implementations, missing_copy_implementations,
         unstable_features,

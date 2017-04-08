@@ -6,6 +6,11 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 //
+//! Helpers for common pattern of `FilesystemFL::FileLike`: delegating reading, writing etc to the
+//! objects.
+//! Handler objects implement either both of `ReadFileLike` and `WriteFileLike`, for
+//! general-purpose opening, and used with `FilesystemFLOpen`; or different handlers are used for
+//! read-only, write-only and read-write opening, and used with `FilesystemFLRwOpen`.
 
 use std::fs::File;
 use std::cmp::min;

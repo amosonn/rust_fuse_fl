@@ -19,7 +19,7 @@ extern crate time;
 
 mod fusefl;
 mod handler_table;
-mod filelike;
+pub mod filelike;
 
 pub use fusefl::{
     CreatedEntryObj,
@@ -27,15 +27,6 @@ pub use fusefl::{
     ResultCreateObj,
     FilesystemFL,
     FuseFL,
-};
-pub use filelike::{
-    ReadFileLike,
-    WriteFileLike,
-    NoFile,
-    ReadWriteAdaptor,
-    ModalFileLike,
-    FilesystemFLRwOpen,
-    FilesystemFLOpen,
 };
 pub use fuse_mt::{
     RequestInfo,

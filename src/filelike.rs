@@ -216,11 +216,15 @@ impl<R, W, RW> WriteFileLike for ModalFileLike<R, W, RW>
 
 /// Trait for using different types for the read, write and read-write files. The read-write type
 /// can be a ReadWriteAdaptor over the read and write ones.
-/// Everything implementing this implements FilesystemFLOpen, dispatching the open and create calls
-/// according to the ACCMODE to the open or create method for the right type of file.
+/// Everything implementing this implements `FilesystemFLOpen`, dispatching the open and create calls
+/// according to the `ACCMODE` to the open or create method for the right type of file.
 /// NOTE: fsync_metadata is not dispatched, but rather gets an enum over the possible file types,
 /// because persumably the synchronization of metadata is mostly unaffected by how the file was
 /// opened.
+/// NOTE: under default impl, all create methods return `ENOSYS` (to enable fallback on mknod+open).
+/// If you want to impl create_read for a write-only fs (or vice-versa), you MUST reimplement
+/// create_write and create_readwrite to return `EROFS` instead, or create_read and
+/// create_readwrite to return `EACCES`.
 pub trait FilesystemFLRwOpen {
     /// Type for read-only file handlers.
     type ReadLike: ReadFileLike; // = NoFile;
@@ -236,7 +240,7 @@ pub trait FilesystemFLRwOpen {
                  _path: &Path,
                  _flags: u32)
                  -> ResultOpenObj<Self::ReadLike> {
-        Err(libc::ENOSYS)
+        Err(libc::EACCES)
     }
 
     /// Open a file write-only.
@@ -245,7 +249,7 @@ pub trait FilesystemFLRwOpen {
                   _path: &Path,
                   _flags: u32)
                   -> ResultOpenObj<Self::WriteLike> {
-        Err(libc::ENOSYS)
+        Err(libc::EROFS)
     }
 
     /// Open a file read-write.
@@ -254,7 +258,7 @@ pub trait FilesystemFLRwOpen {
                       _path: &Path,
                       _flags: u32)
                       -> ResultOpenObj<Self::ReadWriteLike> {
-        Err(libc::ENOSYS)
+        Err(libc::EROFS)
     }
 
     /// Create a file, open for read-only.

@@ -42,6 +42,11 @@ pub use fuse_mt::{
     ResultStatfs,
     ResultXattr,
     FuseMT,
+    // These come from fuse.
+    FileAttr,
+    FileType,
+    mount,
+    spawn_mount,
 };
 
 use std::result;
